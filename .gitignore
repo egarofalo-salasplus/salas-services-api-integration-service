@@ -1,0 +1,44 @@
+# Gitignore para el proyecto Human Resources Service
+
+# Ignorar el archivo de variables de entorno
+.env
+
+# Archivos de compilación de Python
+*.pyc
+*.pyo
+__pycache__/
+
+# Archivos y directorios de Django
+*.log
+*.pot
+*.pyc
+*.pyo
+*.coverage
+.coverage.*
+*.log
+.tox/
+coverage/
+dist/
+build/
+*.egg-info/
+
+# Archivos de bases de datos
+*.sqlite3
+
+# Archivos y carpetas de entornos virtuales
+venv/
+.env/
+*.env
+
+# Archivos de configuración del IDE
+.vscode/
+.idea/
+
+# Archivos relacionados con el sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos de migración
+*/migrations/*.pyc
+*/migrations/__pycache__/
+*/migrations/[0-9]*_*.py
