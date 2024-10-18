@@ -1,7 +1,41 @@
+"""
+Este archivo contiene la clase SesameAPIClient, que interactúa con la API de
+Sesame Time para gestionar información relacionada con empleados, horas
+trabajadas, fichajes y más.
+
+La clase proporciona varios métodos para obtener información detallada de
+empleados, horas trabajadas y fichajes, haciendo solicitudes a los
+diferentes endpoints de la API.
+"""
 import requests
 from decouple import config
 
+
 class SesameAPIClient:
+    class SesameAPIClient:
+        """
+        Cliente para interactuar con la API de Sesame Time.
+
+        Proporciona varios métodos para hacer solicitudes a la API de Sesame
+        en diferentes secciones, como "Security", "Employees", "Statistics",
+        entre otros. Permite obtener información de empleados, fichajes, horas
+        trabajadas,
+        y más.
+
+        Atributos
+        ----------
+        region : str
+            Región en la que se encuentra el servidor de la API
+            (por defecto 'eu1').
+        base_url : str
+            URL base de la API de Sesame Time.
+        api_key : str
+            Clave de API para autenticar las solicitudes.
+        headers : dict
+            Cabeceras para las solicitudes HTTP que incluyen la autorización
+            y tipo de contenido.
+        """
+
     def __init__(self):
         self.region = "eu1"
         self.base_url = f"https://api-{self.region}.sesametime.com"
@@ -22,11 +56,13 @@ class SesameAPIClient:
             La respuesta en formato JSON de la información de la cuenta
         """
         url = f"{self.base_url}/core/v3/info"
-        response = requests.get(url, headers=self.headers)
+        response = requests.get(url, headers=self.headers, timeout=5000)
         return response.json()
 
     # Métodos para la sección "Employees"
-    def get_employees(self, code=None, dni=None, email=None, department_ids=None, office_ids=None, limit=None, page=None, order_by=None, status=None):
+    def get_employees(self, code=None, dni=None, email=None,
+                      department_ids=None, office_ids=None, limit=None,
+                      page=None, order_by=None, status=None):
         """
         Obtener una lista de empleados basada en los parámetros dados.
 
@@ -47,7 +83,8 @@ class SesameAPIClient:
         page : int, opcional
             Solicitar una página específica de resultados.
         order_by : str, opcional
-            Especificar el orden de los resultados (por ejemplo, "campo1 asc, campo2 desc").
+            Especificar el orden de los resultados (por ejemplo, "campo1 asc,
+            campo2 desc").
         status : str, opcional
             Filtrar empleados por estado (por ejemplo, "activo", "inactivo").
 
@@ -68,11 +105,13 @@ class SesameAPIClient:
             "orderBy": order_by,
             "status": status
         }
-        params = {k: v for k, v in params.items() if v is not None}  # Eliminar parámetros nulos
-        response = requests.get(url, headers=self.headers, params=params)
+        # Eliminar parámetros nulos
+        params = {k: v for k, v in params.items() if v is not None}
+        response = requests.get(url, headers=self.headers, params=params,
+                                timeout=5000)
         return response.json()
-    
-    def get_employee_by_id(self, id):
+
+    def get_employee_by_id(self, employee_id):
         """
         Obtener un empleado por id
 
@@ -85,18 +124,20 @@ class SesameAPIClient:
         dict
             La respuesta en formato JSON de la API los datos del empleado.
         """
-        url = f"{self.base_url}/core/v3/employees/{id}"
+        url = f"{self.base_url}/core/v3/employees/{employee_id}"
         params = {
-            "id": id
+            "id": employee_id
         }
-        response = requests.get(url, headers=self.headers, params=params)
+        response = requests.get(url, headers=self.headers, params=params,
+                                timeout=5000)
         return response.json()
-    
+
     # Sección Statistics
-    def get_worked_hours(self, employee_ids=None, with_checks=None, from_date=None, to_date=None, limit=None, page=None):
+    def get_worked_hours(self, employee_ids=None, with_checks=None,
+                         from_date=None, to_date=None, limit=None, page=None):
         """
-        Obtener las horas trabajadas por los empleados según los parámetros dados.
-        De los datos devueltos se pueden obtener las horas teóricas.
+        Obtener las horas trabajadas por los empleados según los parámetros
+        dados. De los datos devueltos se pueden obtener las horas teóricas.
 
         Parámetros
         ----------
@@ -127,12 +168,16 @@ class SesameAPIClient:
             "limit": limit,
             "page": page
         }
-        params = {k: v for k, v in params.items() if v is not None}  # Eliminar parámetros nulos
-        response = requests.get(url, headers=self.headers, params=params)
+        # Eliminar parámetros nulos
+        params = {k: v for k, v in params.items() if v is not None}
+        response = requests.get(url, headers=self.headers, params=params,
+                                timeout=5000)
         return response.json()
-    
-    def get_work_entries(self, employee_id=None, from_date=None, to_date=None, updated_at_gte=None, updated_at_lte=None,
-                         only_return=None, limit=None, page=None, order_by=None):
+
+    def get_work_entries(self, employee_id=None, from_date=None, to_date=None,
+                         updated_at_gte=None, updated_at_lte=None,
+                         only_return=None, limit=None, page=None,
+                         order_by=None):
         """
         Obtener los fichajes de la compañía
 
@@ -149,7 +194,8 @@ class SesameAPIClient:
         update_at_lte : str, opcional
             Timestamp actualizado a menor igual que
         only_return: string, opcionalç
-            Devolver usuarios específicicos. Opciones: [all, not_deleted, deleted]
+            Devolver usuarios específicicos.
+            Opciones: [all, not_deleted, deleted]
             Por defecto: not_deleted
         limit : int, opcional
             Limitar el número de resultados.
@@ -175,13 +221,17 @@ class SesameAPIClient:
             "page": page,
             "orderBy": order_by
         }
-        params = {k: v for k, v in params.items() if v is not None}  # Eliminar parámetros nulos
-        response = requests.get(url, headers=self.headers, params=params)
+        # Eliminar parámetros nulos
+        params = {k: v for k, v in params.items() if v is not None}
+        response = requests.get(url, headers=self.headers, params=params,
+                                timeout=5000)
         return response.json()
 
-    def get_time_entries(self, employee_id=None, from_date=None, to_date=None, employee_status=None, limit=None, page=None):
+    def get_time_entries(self, employee_id=None, from_date=None, to_date=None,
+                         employee_status=None, limit=None, page=None):
         """
-        Obtener las imputaciones de los empleados basadas en los parámetros dados.
+        Obtener las imputaciones de los empleados basadas en los parámetros
+        dados.
 
         Parámetros
         ----------
@@ -192,7 +242,8 @@ class SesameAPIClient:
         to_date : str, opcional
             Fecha de fin en formato "Y-m-d".
         employee_status : str, opcional
-            Estado del empleado ("active" o "inactive"). Valor por defecto: "active".
+            Estado del empleado ("active" o "inactive").
+            Valor por defecto: "active".
         limit : int, opcional
             Limitar el número de resultados.
         page : int, opcional
@@ -212,7 +263,8 @@ class SesameAPIClient:
             "limit": limit,
             "page": page
         }
-        params = {k: v for k, v in params.items() if v is not None}  # Eliminar parámetros nulos
-        response = requests.get(url, headers=self.headers, params=params)
+        # Eliminar parámetros nulos
+        params = {k: v for k, v in params.items() if v is not None}
+        response = requests.get(url, headers=self.headers, params=params,
+                                timeout=5000)
         return response.json()
-
