@@ -12,6 +12,10 @@ class TestSesameAPIClient(unittest.TestCase):
         self.worked_seconds = 21600
         self.comment = "Prueba sobre software ITM Platform"
 
+    def test_get_all_user_parameters(self):
+        response = self.client.get_employee_by_id(self.employee_id)
+        print(f"----- RESPUESTA ------\n {response}")
+        
     def test_get_info(self):
         response = self.client.get_info()
         company_name = response["data"]["company"]["name"]
