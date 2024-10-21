@@ -1,10 +1,10 @@
 """
-Este archivo contiene una suite de pruebas unitarias para la API de Sesame Time 
+Este archivo contiene una suite de pruebas unitarias para la API de Sesame Time
 utilizando FastAPI y el cliente de pruebas `TestClient` de FastAPI.
 
-Las pruebas cubren varias rutas de la API, incluyendo `/sesame/info`, 
-`/sesame/employees`, `/sesame/employees/{employee_id}`, `/sesame/worked-hours`, 
-y `/sesame/work-entries`, verificando que las respuestas sean correctas 
+Las pruebas cubren varias rutas de la API, incluyendo `/sesame/info`,
+`/sesame/employees`, `/sesame/employees/{employee_id}`, `/sesame/worked-hours`,
+y `/sesame/work-entries`, verificando que las respuestas sean correctas
 basadas en datos de ejemplo.
 """
 import unittest
@@ -18,9 +18,9 @@ class TestSesameRouter(unittest.TestCase):
     """
     Clase de pruebas unitarias para las rutas de la API de Sesame Time.
 
-    Esta clase contiene varias pruebas unitarias que verifican el correcto 
-    funcionamiento de las rutas expuestas por la API de Sesame Time. Se 
-    utiliza `TestClient` de FastAPI para realizar solicitudes HTTP simuladas 
+    Esta clase contiene varias pruebas unitarias que verifican el correcto
+    funcionamiento de las rutas expuestas por la API de Sesame Time. Se
+    utiliza `TestClient` de FastAPI para realizar solicitudes HTTP simuladas
     a las rutas de la API.
 
     Atributos

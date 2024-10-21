@@ -1,0 +1,14 @@
+# Usa una imagen base de Python
+FROM python:3.12.5
+
+# Establece el directorio de trabajo en el contenedor
+WORKDIR /app
+
+# Copia los archivos de tu proyecto al directorio de trabajo del contenedor
+COPY . /app
+
+# Instala las dependencias especificadas en requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Define el comando que se ejecutará cuando se inicie el contenedor
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
