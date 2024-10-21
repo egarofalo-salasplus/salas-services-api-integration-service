@@ -9,6 +9,7 @@ diferentes endpoints de la API.
 """
 import requests
 from decouple import config
+import os
 
 
 class SesameAPIClient:
@@ -39,7 +40,7 @@ class SesameAPIClient:
     def __init__(self):
         self.region = "eu1"
         self.base_url = f"https://api-{self.region}.sesametime.com"
-        self.api_key = config("SESAME_API_KEY")
+        self.api_key = config("SESAME_API_KEY", default=os.getenv("SESAME_API_KEY"))
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
