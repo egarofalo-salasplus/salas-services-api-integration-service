@@ -9,6 +9,7 @@ diferentes endpoints de la API.
 """
 import requests
 from decouple import config
+import pandas as pd
 import os
 
 
@@ -111,6 +112,71 @@ class SesameAPIClient:
         response = requests.get(url, headers=self.headers, params=params,
                                 timeout=5000)
         return response.json()
+
+    def get_employees_df(self, code=None, dni=None, email=None,
+                         department_ids=None, office_ids=None, limit=None,
+                         page=None, order_by=None, status=None):
+        """
+        Obtener un pandas.DataFrame de empleados basada en los parámetros dados
+
+        Parámetros
+        ----------
+        code : int, opcional
+            Buscar empleado por código.
+        dni : str, opcional
+            Buscar empleado por DNI.
+        email : str, opcional
+            Buscar empleado por correo electrónico.
+        department_ids : list of str, opcional
+            Buscar empleado por ID de departamento.
+        office_ids : list of str, opcional
+            Buscar empleado por ID de oficina.
+        limit : int, opcional
+            Limitar el número de empleados retornados.
+        page : int, opcional
+            Solicitar una página específica de resultados.
+        order_by : str, opcional
+            Especificar el orden de los resultados (por ejemplo, "campo1 asc,
+            campo2 desc").
+        status : str, opcional
+            Filtrar empleados por estado (por ejemplo, "activo", "inactivo").
+
+        Retorna
+        -------
+        pandas:DataFrame
+            Un DataFrame con los datos de los emmpleados.
+        """
+        url = f"{self.base_url}/core/v3/employees"
+        params = {
+            "code": code,
+            "dni": dni,
+            "email": email,
+            "departmentIds": department_ids,
+            "officeIds": office_ids,
+            "limit": limit,
+            "page": page,
+            "orderBy": order_by,
+            "status": status
+        }
+        # Eliminar parámetros nulos
+        params = {k: v for k, v in params.items() if v is not None}
+        try:
+            response = requests.get(url, headers=self.headers, params=params,
+                                    timeout=5000)
+            
+            # Verificar si la solicitud fue exitosa
+            response.raise_for_status()
+            
+            # Parsear la respuesta JSON
+            data = response.json()
+            
+            df = pd.DataFrame(data)
+            
+            return df
+        
+        except requests.exceptions.RequestException as e:
+            print(f"Error en la solicitud: {e}")
+            return pd.DataFrame()  # Retorna un DataFrame vacío en caso de error
 
     def get_employee_by_id(self, employee_id):
         """
