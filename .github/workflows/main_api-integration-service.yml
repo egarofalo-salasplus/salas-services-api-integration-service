@@ -66,4 +66,4 @@ jobs:
         with:
           app-name: 'api-integration-service'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9F240099F0864B3290D453358615BA21 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_FE568FB9471F4C3ABC77BF1FB86F306C }}
