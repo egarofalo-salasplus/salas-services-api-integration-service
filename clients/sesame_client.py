@@ -163,20 +163,69 @@ class SesameAPIClient:
         try:
             response = requests.get(url, headers=self.headers, params=params,
                                     timeout=5000)
-            
+
             # Verificar si la solicitud fue exitosa
             response.raise_for_status()
-            
+
             # Parsear la respuesta JSON
             data = response.json()
-            
-            df = pd.DataFrame(data)
-            
+
+            # Extrear la porsión de los datos que alimentarán el DataFrame
+            records = data.get("data", [])
+
+            # Crear una lista de registros planos para cada empleado
+            flat_records = []
+            for record in records:
+                # Datos a extraer
+                flat_record = {
+                    'id': record.get('id'),
+                    'firstName': record.get('firstName'),
+                    'lastName': record.get('lastName'),
+                    'email': record.get('email'),
+                    'work_status': record.get('workStatus'),
+                    'profile_image_url': record.get('imageProfileURL'),
+                    'code': record.get('code'),
+                    'pin': record.get('pin'),
+                    'phone': record.get('phone'),
+                    'gender': record.get('gender'),
+                    'contract_id': record.get('contractId'),
+                    'date_of_birth': record.get('dateOfBirth'),
+                    'nid': record.get('nid'),
+                    'identity_number_type': record.get('identityNumberType'),
+                    'ssn': record.get('ssn'),
+                    'price_per_hour': record.get('pricePerHour'),
+                    'account_number': record.get('accountNumber'),
+                    'status': record.get('status'),
+                    'children': record.get('children'),
+                    'disability': record.get('disability'),
+                    'address': record.get('address'),
+                    'postal_code': record.get('postalCode'),
+                    'city': record.get('city'),
+                    'province': record.get('province'),
+                    'country': record.get('country'),
+                    'job_charge_name': record.get('jobChargeName'),
+                    'nationality': record.get('nationality'),
+                    'marital_status': record.get('maritalStatus'),
+                    'study_level': record.get('studyLevel'),
+                    'professional_category_code': record.get('professionalCategoryCode'),
+                    'professional_category_description': record.get('professionalCategoryDescription'),
+                    'bic': record.get('bic'),
+                    # Datos de la compañía
+                    'company_name': record.get('company', {}).get('name'),
+                    # Campos personalizados
+                    'cf_area': next((cf['value'] for cf in record.get('customFields', []) if cf['slug'] == 'cf_rea'), None),
+                    'cf_precio_hora_empresa': next((cf['value'] for cf in record.get('customFields', []) if cf['slug'] == 'cf_precioh_empresa'), None),
+                }
+                flat_records.append(flat_record)
+
+            df = pd.DataFrame(flat_records)
+
             return df
-        
+
         except requests.exceptions.RequestException as e:
             print(f"Error en la solicitud: {e}")
-            return pd.DataFrame()  # Retorna un DataFrame vacío en caso de error
+            # Retorna un DataFrame vacío en caso de error
+            return pd.DataFrame()
 
     def get_employee_by_id(self, employee_id):
         """
@@ -240,6 +289,58 @@ class SesameAPIClient:
         response = requests.get(url, headers=self.headers, params=params,
                                 timeout=5000)
         return response.json()
+    
+    def get_worked_hours_df(self, employee_ids=None, with_checks=None,
+                            from_date=None, to_date=None, limit=None, page=None):
+        """
+        Obtener las horas trabajadas por los empleados según los parámetros
+        dados. De los datos devueltos se pueden obtener las horas teóricas.
+
+        Parámetros
+        ----------
+        employee_ids : list of str, opcional
+            Array de IDs de empleados.
+        with_checks : bool, opcional
+            Incluir verificación (true o false).
+        from_date : str, requerido
+            Fecha de inicio en formato "Y-m-d".
+        to_date : str, requerido
+            Fecha de fin en formato "Y-m-d".
+        limit : int, opcional
+            Limitar el número de resultados.
+        page : int, opcional
+            Solicitar una página específica de resultados.
+
+        Retorna
+        -------
+        pandas:DataFrame
+            Un DataFrame con los datos de las horas trabajadas
+        """
+        url = f"{self.base_url}/schedule/v1/reports/worked-hours"
+        params = {
+            "employeeIds[in]": employee_ids,
+            "withChecks": with_checks,
+            "from": from_date,
+            "to": to_date,
+            "limit": limit,
+            "page": page
+        }
+        # Eliminar parámetros nulos
+        params = {k: v for k, v in params.items() if v is not None}
+
+        response = requests.get(url, headers=self.headers, params=params,
+                                timeout=5000)
+
+        # Verificar si la solicitud fue exitosa
+        response.raise_for_status()
+
+        # Parsear la respuesta JSON
+        data = response.json()
+
+        # Extrear la porsión de los datos que alimentarán el DataFrame
+        records = data.get("data", [])
+        df = pd.DataFrame(records)
+        return df
 
     def get_work_entries(self, employee_id=None, from_date=None, to_date=None,
                          updated_at_gte=None, updated_at_lte=None,
@@ -293,6 +394,91 @@ class SesameAPIClient:
         response = requests.get(url, headers=self.headers, params=params,
                                 timeout=5000)
         return response.json()
+    
+    def get_work_entries_df(self, employee_id=None, from_date=None, to_date=None,
+                            updated_at_gte=None, updated_at_lte=None,
+                            only_return=None, limit=None, page=None,
+                            order_by=None):
+        """
+        Obtener los fichajes de la compañía
+
+        Parámetros
+        ----------
+        employee_id : list of str, opcional
+            ID del empleado.
+        from_date : str, opcional
+            Fecha de inicio en formato "Y-m-d".
+        to_date : str, opcional
+            Fecha de fin en formato "Y-m-d".
+        update_at_gte : str, opcional
+            Timestamp actualizado a mayor igual que
+        update_at_lte : str, opcional
+            Timestamp actualizado a menor igual que
+        only_return: string, opcionalç
+            Devolver usuarios específicicos.
+            Opciones: [all, not_deleted, deleted]
+            Por defecto: not_deleted
+        limit : int, opcional
+            Limitar el número de resultados.
+        page : int, opcional
+            Solicitar una página específica de resultados.
+        order_by : string, opcional
+            Ordenar por
+
+        Retorna
+        -------
+        pandas.DataFrame
+            DataFrame con los fichajes realizados.
+        """
+        url = f"{self.base_url}/schedule/v1/work-entries"
+        params = {
+            "employeeId": employee_id,
+            "from": from_date,
+            "to": to_date,
+            "updatedAt[gte]": updated_at_gte,
+            "updatedAt[lte]": updated_at_lte,
+            "onlyReturn": only_return,
+            "limit": limit,
+            "page": page,
+            "orderBy": order_by
+        }
+        # Eliminar parámetros nulos
+        params = {k: v for k, v in params.items() if v is not None}
+        try:
+            response = requests.get(url, headers=self.headers, params=params,
+                                    timeout=5000)
+
+            # Verificar si la solicitud fue exitosa
+            response.raise_for_status()
+
+            # Parsear la respuesta JSON
+            data = response.json()
+
+            # Extrear la porsión de los datos que alimentarán el DataFrame
+            records = data.get("data", [])
+
+            # Crear una lista de registros planos para cada empleado
+            flat_records = []
+            for record in records:
+                # Datos a extraer
+                flat_record = {
+                    'id': record.get('id'),
+                    'employee_id': record.get('employee')["id"],
+                    'work_entry_type': record.get('workEntryType'),
+                    'worked_seconds': record.get('workedSeconds'),
+                    'work_entry_in_datetime': record.get('workEntryIn', [])['date'],
+                    'work_entry_out_datetime': record.get('workEntryOut', [])['date'],
+                    'work_break_id': record.get('workBreakId'),
+                }
+                flat_records.append(flat_record)
+
+            df = pd.DataFrame(flat_records)
+            return df
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error en la solicitud: {e}")
+            # Retorna un DataFrame vacío en caso de error
+            return pd.DataFrame()
 
     def get_time_entries(self, employee_id=None, from_date=None, to_date=None,
                          employee_status=None, limit=None, page=None):
@@ -335,3 +521,86 @@ class SesameAPIClient:
         response = requests.get(url, headers=self.headers, params=params,
                                 timeout=5000)
         return response.json()
+
+    def get_time_entries_df(self, employee_id=None, from_date=None, to_date=None,
+                         employee_status=None, limit=None, page=None):
+        """
+        Obtener las imputaciones de los empleados basadas en los parámetros
+        dados.
+
+        Parámetros
+        ----------
+        employee_id : str, opcional
+            El ID del empleado (UUID).
+        from_date : str, opcional
+            Fecha de inicio en formato "Y-m-d".
+        to_date : str, opcional
+            Fecha de fin en formato "Y-m-d".
+        employee_status : str, opcional
+            Estado del empleado ("active" o "inactive").
+            Valor por defecto: "active".
+        limit : int, opcional
+            Limitar el número de resultados.
+        page : int, opcional
+            Solicitar una página específica de resultados.
+
+        Retorna
+        -------
+        pandas.DataFrame
+            DataFrame con las entradas de tiempo.
+        """
+        url = f"{self.base_url}/project/v1/time-entries"
+        params = {
+            "employeeId": employee_id,
+            "from": from_date,
+            "to": to_date,
+            "employeeStatus": employee_status,
+            "limit": limit,
+            "page": page
+        }
+        # Eliminar parámetros nulos
+        params = {k: v for k, v in params.items() if v is not None}
+        response = requests.get(url, headers=self.headers, params=params,
+                                timeout=5000)
+        try:
+            response = requests.get(url, headers=self.headers, params=params,
+                                    timeout=5000)
+
+            # Verificar si la solicitud fue exitosa
+            response.raise_for_status()
+
+            # Parsear la respuesta JSON
+            data = response.json()
+
+            # Extrear la porsión de los datos que alimentarán el DataFrame
+            records = data.get("data", [])
+
+            # Crear una lista de registros planos para cada empleado
+            flat_records = []
+            for record in records:
+                # Datos a extraer
+                tags = ""
+                for i, tag in enumerate(record.get('tags')["data"]):
+                    tag_name = tag["name"]
+                    tags += tag_name
+                    if i + 1 < len(record.get('tags')["data"]):
+                        tags += ","
+
+                flat_record = {
+                    'id': record.get('id'),
+                    'employee_id': record.get('employee')["id"],
+                    'project': record.get('project')["name"],
+                    'time_entry_in_datetime': record.get('timeEntryIn')["date"],
+                    'time_entry_out_datetime': record.get('timeEntryOut')["date"],
+                    'tags': tags,
+                    'comment': record.get('comment'),
+                }
+                flat_records.append(flat_record)
+
+            df = pd.DataFrame(flat_records)
+            return df
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error en la solicitud: {e}")
+            # Retorna un DataFrame vacío en caso de error
+            return pd.DataFrame()
