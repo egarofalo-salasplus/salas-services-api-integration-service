@@ -77,12 +77,12 @@ class TestSesameRouter(unittest.TestCase):
         """
         Prueba la ruta `/sesame/employees` para obtener una lista de empleados.
 
-        Realiza una solicitud POST a la ruta `/sesame/employees` con un 
+        Realiza una solicitud GET a la ruta `/sesame/employees` con un 
         parámetro  de correo electrónico y verifica que el primer empleado
         devuelto tenga el nombre correcto.
         """
         query_params = {"email": self.mail, }
-        response = self.client.post("/sesame/employees", json=query_params).json()
+        response = self.client.get("/sesame/employees", json=query_params).json()
         first_employee_name = response["data"][0]["firstName"]
         self.assertEqual(first_employee_name, self.first_name)
 

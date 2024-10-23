@@ -17,12 +17,10 @@ class SesameAPIClient:
     class SesameAPIClient:
         """
         Cliente para interactuar con la API de Sesame Time.
-
         Proporciona varios métodos para hacer solicitudes a la API de Sesame
         en diferentes secciones, como "Security", "Employees", "Statistics",
         entre otros. Permite obtener información de empleados, fichajes, horas
-        trabajadas,
-        y más.
+        trabajadas, y más.
 
         Atributos
         ----------
@@ -394,7 +392,7 @@ class SesameAPIClient:
         response = requests.get(url, headers=self.headers, params=params,
                                 timeout=5000)
         return response.json()
-    
+
     def get_work_entries_df(self, employee_id=None, from_date=None, to_date=None,
                             updated_at_gte=None, updated_at_lte=None,
                             only_return=None, limit=None, page=None,

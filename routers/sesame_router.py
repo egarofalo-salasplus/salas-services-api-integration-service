@@ -160,7 +160,7 @@ async def get_info():
     return sesame_client.get_info()
 
 
-@app.post("/sesame/employees")
+@app.get("/sesame/employees")
 async def get_employees(query_params: EmployeeQueryParams):
     """
     Obtener una lista de empleados según los parámetros dados.
