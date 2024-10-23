@@ -8,10 +8,9 @@ y `/sesame/work-entries`, verificando que las respuestas sean correctas
 basadas en datos de ejemplo.
 """
 import unittest
+import requests
 from fastapi.testclient import TestClient
 from routers.sesame_router import app
-
-client = TestClient(app)
 
 
 class TestSesameRouter(unittest.TestCase):
@@ -81,8 +80,8 @@ class TestSesameRouter(unittest.TestCase):
         parámetro  de correo electrónico y verifica que el primer empleado
         devuelto tenga el nombre correcto.
         """
-        query_params = {"email": self.mail, }
-        response = self.client.get("/sesame/employees", json=query_params).json()
+        params = {"email": self.mail, }
+        response = self.client.get("/sesame/employees", params=params).json()
         first_employee_name = response["data"][0]["firstName"]
         self.assertEqual(first_employee_name, self.first_name)
 
@@ -95,7 +94,7 @@ class TestSesameRouter(unittest.TestCase):
         Realiza una solicitud GET a la ruta `/sesame/employees/{employee_id}` y
         verifica que el nombre del empleado coincida con el esperado.
         """
-        response = client.get(f"/sesame/employees/{self.employee_id}").json()
+        response = self.client.get(f"/sesame/employees/{self.employee_id}").json()
         employee_name = response["data"]["firstName"]
         self.assertEqual(employee_name, self.first_name)
 
@@ -109,12 +108,12 @@ class TestSesameRouter(unittest.TestCase):
         parámetros necesarios y verifica que el número de segundos que el 
         empleado debe trabajar coincida con el valor esperado.
         """
-        query_params = {
+        params = {
             "employee_ids": [self.employee_id],
             "from_date": "2024-10-11",
             "to_date": "2024-10-11",
         }
-        response = client.post("/sesame/worked-hours", json=query_params).json()
+        response = self.client.get("/sesame/worked-hours", params=params).json()
         seconds_to_work = response["data"][0]["secondsToWork"]
         self.assertEqual(seconds_to_work, self.seconds_to_work)
 
@@ -127,12 +126,12 @@ class TestSesameRouter(unittest.TestCase):
         parámetros necesarios y verifica que el número de segundos trabajados
         coincida con el valor esperado.
         """
-        query_params = {
+        params = {
             "employee_id": self.employee_id,
             "from_date": "2024-10-11",
             "to_date": "2024-10-11",
         }
-        response = client.post("/sesame/work-entries", json=query_params).json()
+        response = self.client.get("/sesame/work-entries", params=params).json()
         worked_seconds = response["data"][0]["workedSeconds"]
         self.assertEqual(worked_seconds, self.worked_seconds)
 
@@ -145,11 +144,11 @@ class TestSesameRouter(unittest.TestCase):
         parámetros necesarios y verifica que el comentario devuelto en los 
         datos coincida con el esperado.
         """
-        query_params = {
+        params = {
             "employee_id": self.employee_id,
             "from_date": "2024-10-11",
             "to_date": "2024-10-11",
         }
-        response = client.post("/sesame/time-entries", json=query_params).json()
+        response = self.client.get("/sesame/time-entries", params=params).json()
         comment = response["data"][0]["comment"]
         self.assertEqual(comment, self.comment)
