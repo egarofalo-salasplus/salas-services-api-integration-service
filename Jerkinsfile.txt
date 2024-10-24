@@ -1,0 +1,133 @@
+pipeline {
+    agent none  // No se define un agente global, lo definimos por etapa
+    
+    environment {
+        APP_NAME = 'human-resources-service'
+        CONTAINER_REG = 'salasmicroservicesacr'
+        WEB_APP = "api-integration-ms"
+        RESOURCE_GROUP = "data-management-group"
+    }
+
+    stages {
+        stage('Clone Repository') {
+            agent any  // Utiliza el agente por defecto (donde Jenkins está instalado)
+            steps {
+                git branch: 'main', url: 'https://github.com/egarofalo-salasplus/salas-services-api-integration-service.git'
+            }
+        }
+        
+        stage('Instalar dependencias') {
+            agent {
+                docker {
+                    image 'python:3.12.5-slim'
+                }
+            }
+            steps {
+                script {
+                    // Instalamos las dependencias del proyecto y las herramientas para las verificaciones
+                    sh '''
+                    python -m venv venv
+                    . venv/bin/activate
+                    pip install -r requirements.txt
+                    pip install flake8 pytest pytest-cov
+                    '''
+                }
+            }
+        }
+
+        stage('Linting') {
+            agent {
+                docker {
+                    image 'python:3.12.5-slim'
+                }
+            }
+            steps {
+                script {
+                    // Ejecutamos el análisis de estilo con Flake8
+                    sh '''
+                    . venv/bin/activate
+                    flake8 . --exit-zero
+                    '''
+                }
+            }
+        }
+
+        stage('Ejecutar pruebas unitarias') {
+            agent {
+                docker {
+                    image 'python:3.12.5-slim'
+                }
+            }
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'sesame_api_key', variable: 'SESAME_API_KEY')]) {
+                        // Usar la credencial dentro del script
+                        sh '''
+                        . venv/bin/activate
+                        pytest -s --cov=. --cov-report xml:tests/coverage.xml tests/
+                        '''
+                    }
+                    
+                }
+            }
+        }
+
+        stage('Publicar informe de cobertura') {
+            agent {
+                docker {
+                    image 'python:3.12.5-slim'
+                }
+            }
+            steps {
+                script {
+                    // Publicamos los resultados de la cobertura en Jenkins
+                    publishCoverage adapters: [coberturaAdapter('tests/coverage.xml')]
+                }
+            }
+        }
+        
+        stage('Construir imagen Docker') {
+            agent any  // Volvemos a utilizar el agente por defecto de Jenkins
+            steps {
+                script {
+                    // Construir la imagen Docker
+                    sh 'docker build -t ${CONTAINER_REG}.azurecr.io/${APP_NAME}:${BUILD_ID} .'
+                }
+            }
+        }
+        
+        stage('Autenticarse en Azure Container Registry') {
+            agent any  // Volvemos a utilizar el agente por defecto de Jenkins
+            steps {
+                script {
+                    // Autenticarse usando las credenciales de ACR almacenadas en Jenkins
+                    withCredentials([usernamePassword(credentialsId: 'acr_credentials', passwordVariable: 'ACR_PASSWORD', usernameVariable: 'ACR_USERNAME')]) {
+                        sh 'docker login ${CONTAINER_REG}.azurecr.io -u $ACR_USERNAME -p $ACR_PASSWORD'
+                    }
+                }
+            }
+        }
+
+        stage('Subir la imagen a ACR') {
+            agent any  // Volvemos a utilizar el agente por defecto de Jenkins
+            steps {
+                script {
+                    // Subir la imagen a Azure Container Registry
+                    sh 'docker push ${CONTAINER_REG}.azurecr.io/${APP_NAME}:${BUILD_ID}'
+                }
+            }
+        }
+        
+        stage('Desplegar en Azure Web App') {
+            agent any  // Volvemos a utilizar el agente por defecto de Jenkins
+    	   steps {
+               script {
+     		   // Usamos Azure CLI para actualizar la imagen en la Web App
+     		   sh '''
+    		   az webapp config container set --name ${WEB_APP} --resource-group ${RESOURCE_GROUP} --docker-custom-image-name ${CONTAINER_REG}.azurecr.io/${APP_NAME}:${BUILD_ID}
+    		   '''
+    	       }
+            }
+        }
+    }
+}
