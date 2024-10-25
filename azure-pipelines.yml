@@ -17,7 +17,7 @@ stages:
         displayName: 'Deploy Docker Image to Azure Web App'
         pool:
           vmImage: 'ubuntu-latest'
-        container: mcr.microsoft.com/azure-cli
+        container: 'mcr.microsoft.com/azure-cli:latest'
         steps:
           - task: AzureCLI@2
             inputs:
