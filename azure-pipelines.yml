@@ -26,7 +26,7 @@ stages:
                 -e AZURE_TENANT_ID=$(AZURE_TENANT_ID) \
                 mcr.microsoft.com/azure-cli:latest \
                 /bin/bash -c "
-                  az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID &&
+                  az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
                   az webapp config container set --name $WEB_APP --resource-group $RESOURCE_GROUP --docker-custom-image-name $CONTAINER_REG.azurecr.io/$APP_NAME:latest
                 "
             env:
