@@ -1,19 +1,101 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
-- main
+  branches:
+    include:
+      - main
 
-pool:
-  vmImage: ubuntu-latest
+variables:
+  APP_NAME: 'human-resources-service'
+  CONTAINER_REG: 'salasmicroservicesacr'
+  WEB_APP: 'api-integration-ms'
+  RESOURCE_GROUP: 'data-management-group'
+  TENANT_ID: '39f1381a-9292-4c9c-8aef-2e074e1569c2'
+  BUILD_ID: $(Build.BuildId)
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+stages:
+  - stage: Build
+    jobs:
+      - job: CloneAndInstall
+        displayName: 'Clone Repository and Install Dependencies'
+        pool:
+          vmImage: 'ubuntu-latest'
+        container: python:3.12.5-slim
+        steps:
+          - checkout: self
+          - script: |
+              python -m venv venv
+              . venv/bin/activate
+              pip install -r requirements.txt
+              pip install flake8 pytest pytest-cov
+            displayName: 'Install dependencies'
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+      - job: Linting
+        displayName: 'Run linting with Flake8'
+        pool:
+          vmImage: 'ubuntu-latest'
+        container: python:3.12.5-slim
+        steps:
+          - script: |
+              . venv/bin/activate
+              flake8 . --exit-zero
+            displayName: 'Linting'
+
+      - job: TestAndCoverage
+        displayName: 'Run unit tests and publish coverage'
+        pool:
+          vmImage: 'ubuntu-latest'
+        container: python:3.12.5-slim
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.12'
+          - script: |
+              . venv/bin/activate
+              pytest -s --cov=. --cov-report xml:tests/coverage.xml tests/
+            env:
+              SESAME_API_KEY: $(SESAME_API_KEY)  # Variable secreta en Azure Pipelines
+            displayName: 'Run tests with coverage'
+          - task: PublishCodeCoverageResults@1
+            inputs:
+              codeCoverageTool: 'Cobertura'
+              summaryFileLocation: 'tests/coverage.xml'
+            displayName: 'Publish Coverage Report'
+
+  - stage: DockerBuildAndPush
+    dependsOn: Build
+    jobs:
+      - job: BuildDocker
+        displayName: 'Build Docker Image'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: Docker@2
+            inputs:
+              containerRegistry: '$(CONTAINER_REG)'  # Nombre de conexión de servicio de ACR en Azure
+              repository: '$(CONTAINER_REG).azure.io/$(APP_NAME)'
+              command: 'buildAndPush'
+              Dockerfile: 'Dockerfile'
+              tags: |
+                $(BUILD_ID)
+            displayName: 'Build and Push Docker Image'
+
+  - stage: Deploy
+    dependsOn: DockerBuildAndPush
+    jobs:
+      - job: DeployToAzure
+        displayName: 'Deploy Docker Image to Azure Web App'
+        pool:
+          vmImage: 'ubuntu-latest'
+        container: mcr.microsoft.com/azure-cli
+        steps:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'myAzureServiceConnection'  # Conexión de servicio de Azure configurada en Azure Pipelines
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az login --service-principal -u $(AZURE_CLIENT_ID) -p $(AZURE_CLIENT_SECRET) --tenant $(TENANT_ID)
+                az webapp config container set --name $(WEB_APP) --resource-group $(RESOURCE_GROUP) --docker-custom-image-name $(CONTAINER_REG).azurecr.io/$(APP_NAME):$(BUILD_ID)
+            env:
+              AZURE_CLIENT_ID: $(AZURE_CLIENT_ID)  # Variable secreta configurada en Azure Pipelines
+              AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
+            displayName: 'Deploy to Azure Web App'
