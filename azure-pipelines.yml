@@ -8,7 +8,6 @@ variables:
   CONTAINER_REG: 'salasmicroservicesacr'
   WEB_APP: 'api-integration-ms'
   RESOURCE_GROUP: 'data-management-group'
-  TENANT_ID: '39f1381a-9292-4c9c-8aef-2e074e1569c2'
   BUILD_ID: $(Build.BuildId)
 
 stages:
