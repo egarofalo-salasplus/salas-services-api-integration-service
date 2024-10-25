@@ -25,5 +25,5 @@ stages:
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               inlineScript: |
-                az webapp config container set --name $(WEB_APP) --resource-group $(RESOURCE_GROUP) --docker-custom-image-name $(CONTAINER_REG).azurecr.io/$(APP_NAME):$(BUILD_ID)
+                az webapp config container set --name $(WEB_APP) --resource-group $(RESOURCE_GROUP) --docker-custom-image-name $(CONTAINER_REG).azurecr.io/$(APP_NAME):latest
 
