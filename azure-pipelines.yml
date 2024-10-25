@@ -89,7 +89,6 @@ stages:
         steps:
           - task: AzureCLI@2
             inputs:
-              azureSubscription: 'myAzureServiceConnection'  # Conexión de servicio de Azure configurada en Azure Pipelines
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               inlineScript: |
