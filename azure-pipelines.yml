@@ -54,20 +54,15 @@ stages:
         pool:
           vmImage: 'ubuntu-latest'
         steps:
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: 'myAcrServiceConnection'  # Conexión de servicio de ACR configurada en Azure Pipelines
-              scriptType: 'bash'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                # Autenticarse en Azure Container Registry usando docker login
-                docker login $(CONTAINER_REG).azurecr.io -u $ACR_USERNAME -p $ACR_PASSWORD
+          - script: |
+              # Autenticarse en Azure Container Registry usando docker login
+              docker login $(CONTAINER_REG).azurecr.io -u $ACR_USERNAME -p $ACR_PASSWORD
 
-                # Construir la imagen de Docker
-                docker build -t $(CONTAINER_REG).azurecr.io/$(APP_NAME):$(BUILD_ID) .
+              # Construir la imagen de Docker
+              docker build -t $(CONTAINER_REG).azurecr.io/$(APP_NAME):$(BUILD_ID) .
 
-                # Subir la imagen a Azure Container Registry
-                docker push $(CONTAINER_REG).azurecr.io/$(APP_NAME):$(BUILD_ID)
+              # Subir la imagen a Azure Container Registry
+              docker push $(CONTAINER_REG).azurecr.io/$(APP_NAME):$(BUILD_ID)
             env:
               ACR_USERNAME: $(ACR_USERNAME)        # Define el nombre de usuario como variable secreta en Azure Pipelines
               ACR_PASSWORD: $(ACR_PASSWORD)        # Define la contraseña como variable secreta en Azure Pipelines
