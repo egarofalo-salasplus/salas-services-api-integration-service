@@ -17,13 +17,26 @@ stages:
         displayName: 'Deploy Docker Image to Azure Web App'
         pool:
           vmImage: 'ubuntu-latest'
-        container: 'mcr.microsoft.com/azure-cli:latest'
         steps:
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: 'myAzureServiceConnection'  # Conexión de servicio con MSI
-              scriptType: 'bash'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                az webapp config container set --name $(WEB_APP) --resource-group $(RESOURCE_GROUP) --docker-custom-image-name $(CONTAINER_REG).azurecr.io/$(APP_NAME):latest
-
+          - script: |
+              docker run --rm \
+                -e AZURE_SUBSCRIPTION_ID=$(AZURE_SUBSCRIPTION_ID) \
+                -e AZURE_CLIENT_ID=$(AZURE_CLIENT_ID) \
+                -e AZURE_CLIENT_SECRET=$(AZURE_CLIENT_SECRET) \
+                -e AZURE_TENANT_ID=$(AZURE_TENANT_ID) \
+                mcr.microsoft.com/azure-cli:latest \
+                /bin/bash -c "
+                  az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID &&
+                  az webapp config container set --name $WEB_APP --resource-group $RESOURCE_GROUP --docker-custom-image-name $CONTAINER_REG.azurecr.io/$APP_NAME:latest
+                "
+            env:
+              AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
+              AZURE_CLIENT_ID: $(AZURE_CLIENT_ID)
+              AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
+              AZURE_TENANT_ID: $(AZURE_TENANT_ID)
+              WEB_APP: $(WEB_APP)
+              RESOURCE_GROUP: $(RESOURCE_GROUP)
+              CONTAINER_REG: $(CONTAINER_REG)
+              APP_NAME: $(APP_NAME)
+              BUILD_ID: $(BUILD_ID)
+            displayName: 'Deploy to Azure Web App using Azure CLI Docker Container'
