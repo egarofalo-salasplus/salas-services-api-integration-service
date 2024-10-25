@@ -8,9 +8,67 @@ variables:
   CONTAINER_REG: 'salasmicroservicesacr'
   WEB_APP: 'api-integration-ms'
   RESOURCE_GROUP: 'data-management-group'
+  TENANT_ID: '39f1381a-9292-4c9c-8aef-2e074e1569c2'
   BUILD_ID: $(Build.BuildId)
 
 stages:
+  - stage: BuildAndTest
+    jobs:
+      - job: BuildAndTest
+        displayName: 'Clone Repository and Install Dependencies, Lint and Test'
+        pool:
+          vmImage: 'ubuntu-latest'
+        container: python:3.12.5-slim
+        steps:
+          - checkout: self
+          - script: |
+              python -m venv venv
+              . venv/bin/activate
+              pip install -r requirements.txt
+              pip install flake8 pytest pytest-cov pytest-azurepipelines
+            displayName: 'Install dependencies'
+          
+          - script: |
+              . venv/bin/activate
+              flake8 . --exit-zero
+            displayName: 'Linting'
+          
+          - script: |
+              . venv/bin/activate
+              pytest --doctest-modules --junitxml=junit/test-results.xml --cov=. --cov-report=xml tests/
+            env:
+              SESAME_API_KEY: $(SESAME_API_KEY)  # Variable secreta en Azure Pipelines
+            displayName: 'Run tests with coverage'
+          
+          - task: PublishCodeCoverageResults@2
+            inputs:
+              codeCoverageTool: 'Cobertura'
+              summaryFileLocation: 'tests/coverage.xml'
+            displayName: 'Publish Coverage Report'
+
+  - stage: DockerBuildAndPush
+    dependsOn: BuildAndTest
+    jobs:
+      - job: BuildDocker
+        displayName: 'Build and Push Docker Image with Script'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+          - script: |
+              # Autenticarse en Azure Container Registry usando docker login
+              docker login $(CONTAINER_REG).azurecr.io -u $ACR_USERNAME -p $ACR_PASSWORD
+
+              # Construir la imagen de Docker
+              docker build -t $(CONTAINER_REG).azurecr.io/$(APP_NAME):$(BUILD_ID) .
+
+              # Subir la imagen a Azure Container Registry
+              docker push $(CONTAINER_REG).azurecr.io/$(APP_NAME):$(BUILD_ID)
+            env:
+              ACR_USERNAME: $(ACR_USERNAME)        # Define el nombre de usuario como variable secreta en Azure Pipelines
+              ACR_PASSWORD: $(ACR_PASSWORD)        # Define la contraseña como variable secreta en Azure Pipelines
+            displayName: 'Build and Push Docker Image'
+
   - stage: Deploy
     jobs:
       - job: DeployToAzure
@@ -27,7 +85,7 @@ stages:
                 mcr.microsoft.com/azure-cli:latest \
                 /bin/bash -c "
                   az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
-                  az webapp config container set --name $WEB_APP --resource-group $RESOURCE_GROUP --docker-custom-image-name $CONTAINER_REG.azurecr.io/$APP_NAME:latest
+                  az webapp config container set --name $WEB_APP --resource-group $RESOURCE_GROUP --docker-custom-image-name $CONTAINER_REG.azurecr.io/$APP_NAME:$(BUILD_ID)
                 "
             env:
               AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
