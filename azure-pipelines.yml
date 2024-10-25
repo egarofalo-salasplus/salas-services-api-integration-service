@@ -15,7 +15,7 @@ stages:
   - stage: BuildAndTest
     jobs:
       - job: BuildAndTest
-        displayName: 'Clone Repository and Install Dependencies, Lit and Test'
+        displayName: 'Clone Repository and Install Dependencies, Lint and Test'
         pool:
           vmImage: 'ubuntu-latest'
         container: python:3.12.5-slim
@@ -40,7 +40,7 @@ stages:
               SESAME_API_KEY: $(SESAME_API_KEY)  # Variable secreta en Azure Pipelines
             displayName: 'Run tests with coverage'
           
-          - task: PublishCodeCoverageResults@1
+          - task: PublishCodeCoverageResults@2
             inputs:
               codeCoverageTool: 'Cobertura'
               summaryFileLocation: 'tests/coverage.xml'
@@ -50,18 +50,27 @@ stages:
     dependsOn: BuildAndTest
     jobs:
       - job: BuildDocker
-        displayName: 'Build Docker Image'
+        displayName: 'Build and Push Docker Image with Script'
         pool:
           vmImage: 'ubuntu-latest'
         steps:
-          - task: Docker@2
+          - task: AzureCLI@2
             inputs:
-              containerRegistry: 'myAcrServiceConnection'  # Nombre de conexión de servicio de ACR en Azure
-              repository: '$(CONTAINER_REG).azure.io/$(APP_NAME)'
-              command: 'buildAndPush'
-              Dockerfile: 'Dockerfile'
-              tags: |
-                $(BUILD_ID)
+              azureSubscription: 'myAcrServiceConnection'  # Conexión de servicio de ACR configurada en Azure Pipelines
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                # Autenticarse en Azure Container Registry usando docker login
+                docker login $(CONTAINER_REG).azurecr.io -u $ACR_USERNAME -p $ACR_PASSWORD
+
+                # Construir la imagen de Docker
+                docker build -t $(CONTAINER_REG).azurecr.io/$(APP_NAME):$(BUILD_ID) .
+
+                # Subir la imagen a Azure Container Registry
+                docker push $(CONTAINER_REG).azurecr.io/$(APP_NAME):$(BUILD_ID)
+            env:
+              ACR_USERNAME: $(ACR_USERNAME)        # Define el nombre de usuario como variable secreta en Azure Pipelines
+              ACR_PASSWORD: $(ACR_PASSWORD)        # Define la contraseña como variable secreta en Azure Pipelines
             displayName: 'Build and Push Docker Image'
 
   - stage: Deploy
