@@ -70,7 +70,7 @@ stages:
         steps:
           - task: Docker@2
             inputs:
-              containerRegistry: '$(CONTAINER_REG).azure.io'  # Nombre de conexión de servicio de ACR en Azure
+              containerRegistry: 'myAcrServiceConnection'  # Nombre de conexión de servicio de ACR en Azure
               repository: '$(CONTAINER_REG).azure.io/$(APP_NAME)'
               command: 'buildAndPush'
               Dockerfile: 'Dockerfile'
