@@ -27,7 +27,7 @@ stages:
               mcr.microsoft.com/azure-cli:latest \
               /bin/bash -c "
                 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $TENANT_ID &&
-                az webapp config container set --name $(WEB_APP) --resource-group $(RESOURCE_GROUP) --docker-custom-image-name $(CONTAINER_REG).azurecr.io/$(APP_NAME):$(BUILD_ID)
+                az webapp config container set --name $(WEB_APP) --resource-group $(RESOURCE_GROUP) --docker-custom-image-name $(CONTAINER_REG).azurecr.io/$(APP_NAME):latest
               "
           env:
             AZURE_CLIENT_ID: $(AZURE_CLIENT_ID)  # Variable secreta configurada en Azure Pipelines
