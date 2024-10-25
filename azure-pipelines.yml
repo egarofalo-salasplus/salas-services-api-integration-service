@@ -12,45 +12,26 @@ variables:
   BUILD_ID: $(Build.BuildId)
 
 stages:
-  - stage: DockerBuildAndPush
-    jobs:
-      - job: BuildDocker
-        displayName: 'Build and Push Docker Image with Script'
-        pool:
-          vmImage: 'ubuntu-latest'
-        steps:
-          - checkout: self
-          - script: |
-              # Autenticarse en Azure Container Registry usando docker login
-              docker login $(CONTAINER_REG).azurecr.io -u $ACR_USERNAME -p $ACR_PASSWORD
-
-              # Construir la imagen de Docker
-              docker build -t $(CONTAINER_REG).azurecr.io/$(APP_NAME):$(BUILD_ID) .
-
-              # Subir la imagen a Azure Container Registry
-              docker push $(CONTAINER_REG).azurecr.io/$(APP_NAME):$(BUILD_ID)
-            env:
-              ACR_USERNAME: $(ACR_USERNAME)        # Define el nombre de usuario como variable secreta en Azure Pipelines
-              ACR_PASSWORD: $(ACR_PASSWORD)        # Define la contraseña como variable secreta en Azure Pipelines
-            displayName: 'Build and Push Docker Image'
-
-  - stage: Deploy
-    dependsOn: DockerBuildAndPush
-    jobs:
-      - job: DeployToAzure
-        displayName: 'Deploy Docker Image to Azure Web App'
-        pool:
-          vmImage: 'ubuntu-latest'
-        container: 'mcr.microsoft.com/azure-cli:latest'
-        steps:
-          - task: AzureCLI@2
-            inputs:
-              scriptType: 'bash'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                az login --service-principal -u $(AZURE_CLIENT_ID) -p $(AZURE_CLIENT_SECRET) --tenant $(TENANT_ID)
+- stage: Deploy
+  jobs:
+    - job: DeployToAzure
+      displayName: 'Deploy Docker Image to Azure Web App'
+      pool:
+        vmImage: 'ubuntu-latest'
+      steps:
+        - script: |
+            docker run --rm \
+              -e AZURE_CLIENT_ID=$(AZURE_CLIENT_ID) \
+              -e AZURE_CLIENT_SECRET=$(AZURE_CLIENT_SECRET) \
+              -e TENANT_ID=$(TENANT_ID) \
+              mcr.microsoft.com/azure-cli:latest \
+              /bin/bash -c "
+                az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $TENANT_ID &&
                 az webapp config container set --name $(WEB_APP) --resource-group $(RESOURCE_GROUP) --docker-custom-image-name $(CONTAINER_REG).azurecr.io/$(APP_NAME):$(BUILD_ID)
-            env:
-              AZURE_CLIENT_ID: $(AZURE_CLIENT_ID)  # Variable secreta configurada en Azure Pipelines
-              AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
-            displayName: 'Deploy to Azure Web App'
+              "
+          env:
+            AZURE_CLIENT_ID: $(AZURE_CLIENT_ID)  # Variable secreta configurada en Azure Pipelines
+            AZURE_CLIENT_SECRET: $(AZURE_CLIENT_SECRET)
+            TENANT_ID: $(TENANT_ID)
+          displayName: 'Deploy to Azure Web App using Azure CLI Docker Container'
+
