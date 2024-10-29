@@ -10,7 +10,12 @@ basadas en datos de ejemplo.
 import unittest
 import requests
 from fastapi.testclient import TestClient
-from routers.sesame_router import app
+from main import app
+from decouple import config
+import os
+
+# Definir una clave secreta para firmar el JWT
+SECRET_KEY = config('SALAS_API_KEY', default=os.getenv('SALAS_API_KEY'))
 
 
 class TestSesameRouter(unittest.TestCase):
@@ -57,6 +62,10 @@ class TestSesameRouter(unittest.TestCase):
         self.seconds_to_work = 21600
         self.worked_seconds = 21600
         self.comment = "Prueba sobre software ITM Platform"
+        # Encabezado de autenticación con Bearer Token
+        self.headers = {
+            "Authorization": f"Bearer {SECRET_KEY}"
+        }
 
     # Pruebas para la ruta /sesame/info
     def test_get_info(self):
@@ -67,7 +76,7 @@ class TestSesameRouter(unittest.TestCase):
         código de respuesta sea 200. Además, se asegura de que la respuesta
         incluya la clave "company" dentro de los datos.
         """
-        response = self.client.get("/sesame/info")
+        response = self.client.get("/sesame/info", headers=self.headers)
         self.assertEqual(response.status_code, 200)
         self.assertIn("company", response.json()["data"])
 
@@ -81,7 +90,9 @@ class TestSesameRouter(unittest.TestCase):
         devuelto tenga el nombre correcto.
         """
         params = {"email": self.mail, }
-        response = self.client.get("/sesame/employees", params=params).json()
+        response = self.client.get("/sesame/employees",
+                                   headers=self.headers,
+                                   params=params).json()
         first_employee_name = response["data"][0]["firstName"]
         self.assertEqual(first_employee_name, self.first_name)
 
@@ -94,7 +105,8 @@ class TestSesameRouter(unittest.TestCase):
         Realiza una solicitud GET a la ruta `/sesame/employees/{employee_id}` y
         verifica que el nombre del empleado coincida con el esperado.
         """
-        response = self.client.get(f"/sesame/employees/{self.employee_id}").json()
+        response = self.client.get(f"/sesame/employees/{self.employee_id}",
+                                   headers=self.headers).json()
         employee_name = response["data"]["firstName"]
         self.assertEqual(employee_name, self.first_name)
 
@@ -113,7 +125,9 @@ class TestSesameRouter(unittest.TestCase):
             "from_date": "2024-10-11",
             "to_date": "2024-10-11",
         }
-        response = self.client.get("/sesame/worked-hours", params=params).json()
+        response = self.client.get("/sesame/worked-hours",
+                                   headers=self.headers,
+                                   params=params).json()
         seconds_to_work = response["data"][0]["secondsToWork"]
         self.assertEqual(seconds_to_work, self.seconds_to_work)
 
@@ -131,7 +145,9 @@ class TestSesameRouter(unittest.TestCase):
             "from_date": "2024-10-11",
             "to_date": "2024-10-11",
         }
-        response = self.client.get("/sesame/work-entries", params=params).json()
+        response = self.client.get("/sesame/work-entries",
+                                   headers=self.headers,
+                                   params=params).json()
         worked_seconds = response["data"][0]["workedSeconds"]
         self.assertEqual(worked_seconds, self.worked_seconds)
 
@@ -149,6 +165,8 @@ class TestSesameRouter(unittest.TestCase):
             "from_date": "2024-10-11",
             "to_date": "2024-10-11",
         }
-        response = self.client.get("/sesame/time-entries", params=params).json()
+        response = self.client.get("/sesame/time-entries",
+                                   headers=self.headers,
+                                   params=params).json()
         comment = response["data"][0]["comment"]
         self.assertEqual(comment, self.comment)

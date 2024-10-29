@@ -10,6 +10,7 @@ diferentes endpoints de la API.
 import requests
 from decouple import config
 import pandas as pd
+import io
 import os
 
 
@@ -36,10 +37,13 @@ class SesameAPIClient:
             y tipo de contenido.
         """
 
-    def __init__(self):
+    def __init__(self, company_token=None):
         self.region = "eu1"
         self.base_url = f"https://api-{self.region}.sesametime.com"
-        self.api_key = config("SESAME_API_KEY", default=os.getenv("SESAME_API_KEY"))
+        if company_token is None:
+            self.api_key = config("SESAME_API_KEY", default=os.getenv("SESAME_API_KEY"))
+        else:
+            self.api_key = company_token
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
@@ -111,11 +115,11 @@ class SesameAPIClient:
                                 timeout=5000)
         return response.json()
 
-    def get_employees_df(self, code=None, dni=None, email=None,
+    def get_employees_csv(self, code=None, dni=None, email=None,
                          department_ids=None, office_ids=None, limit=None,
                          page=None, order_by=None, status=None):
         """
-        Obtener un pandas.DataFrame de empleados basada en los parámetros dados
+        Obtener un csv de empleados basada en los parámetros dados
 
         Parámetros
         ----------
@@ -141,8 +145,9 @@ class SesameAPIClient:
 
         Retorna
         -------
-        pandas:DataFrame
-            Un DataFrame con los datos de los emmpleados.
+        text: csv
+            Texto con valores separados por comas con los datos de los 
+            emmpleados.
         """
         url = f"{self.base_url}/core/v3/employees"
         params = {
@@ -158,7 +163,36 @@ class SesameAPIClient:
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
+        records = []
         try:
+            if page is None:
+                page = 1
+                while True:
+                    params = {
+                        "code": code,
+                        "dni": dni,
+                        "email": email,
+                        "departmentIds": department_ids,
+                        "officeIds": office_ids,
+                        "limit": limit,
+                        "page": page,
+                        "orderBy": order_by,
+                        "status": status
+                    }
+                    response = requests.get(url, headers=self.headers,
+                                            params=params, timeout=5000)
+
+                    response.raise_for_status()
+
+                    data = response.json()
+
+                    if not data["data"]:
+                        break
+
+                    records.extend(data["data"])
+                    
+                    page += 1
+
             response = requests.get(url, headers=self.headers, params=params,
                                     timeout=5000)
 
@@ -169,7 +203,8 @@ class SesameAPIClient:
             data = response.json()
 
             # Extrear la porsión de los datos que alimentarán el DataFrame
-            records = data.get("data", [])
+            if records == []:
+                records = data.get("data", [])
 
             # Crear una lista de registros planos para cada empleado
             flat_records = []
@@ -218,12 +253,16 @@ class SesameAPIClient:
 
             df = pd.DataFrame(flat_records)
 
-            return df
+            # Convertir el DataFrame a un formato CSV en un string
+            output = io.StringIO()
+            df.to_csv(output, index=False)
+
+            return output.getvalue()
 
         except requests.exceptions.RequestException as e:
             print(f"Error en la solicitud: {e}")
             # Retorna un DataFrame vacío en caso de error
-            return pd.DataFrame()
+            return ""
 
     def get_employee_by_id(self, employee_id):
         """

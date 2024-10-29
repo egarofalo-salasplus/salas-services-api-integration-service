@@ -6,6 +6,7 @@ pipeline {
         CONTAINER_REG = 'salasmicroservicesacr'
         WEB_APP = "api-integration-ms"
         RESOURCE_GROUP = "data-management-group"
+        TENANT_ID = "39f1381a-9292-4c9c-8aef-2e074e1569c2"
     }
 
     stages {
@@ -118,15 +119,21 @@ pipeline {
             }
         }
         
-        stage('Desplegar en Azure Web App') {
-            agent any  // Volvemos a utilizar el agente por defecto de Jenkins
-    	   steps {
-               script {
-     		   // Usamos Azure CLI para actualizar la imagen en la Web App
-     		   sh '''
-    		   az webapp config container set --name ${WEB_APP} --resource-group ${RESOURCE_GROUP} --docker-custom-image-name ${CONTAINER_REG}.azurecr.io/${APP_NAME}:${BUILD_ID}
-    		   '''
-    	       }
+        stage('Autenticar con Azure CLI y desplegar en Azure Web App') {
+            agent {
+                docker {
+                    image 'mcr.microsoft.com/azure-cli'
+                }
+            }
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'azure-sp-credentials', usernameVariable: 'AZURE_CLIENT_ID', passwordVariable: 'AZURE_CLIENT_SECRET')]) {
+                        sh '''
+                        az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant ${TENANT_ID}
+                        az webapp config container set --name ${WEB_APP} --resource-group ${RESOURCE_GROUP} --docker-custom-image-name ${CONTAINER_REG}.azurecr.io/${APP_NAME}:${BUILD_ID}
+                        '''
+                    }
+                }
             }
         }
     }

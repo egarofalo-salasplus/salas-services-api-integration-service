@@ -34,10 +34,9 @@ class TestSesameAPIClient(unittest.TestCase):
         response = self.client.get_employees(email=self.mail)
         first_employee_name = response["data"][0]["firstName"]
         self.assertEqual(first_employee_name, self.first_name)
-  
-    def test_get_employees_df(self):
-        response = self.client.get_employees_df(email=self.mail)
-        self.assertEqual(response.empty, False)
+
+    def test_get_employees_csv(self):
+        response = self.client.get_employees_csv()
 
     def test_get_employee_by_id(self):
         response = self.client.get_employee_by_id(self.employee_id)

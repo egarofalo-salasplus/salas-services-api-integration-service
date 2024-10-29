@@ -8,12 +8,16 @@ La API permite realizar consultas a la API de Sesame mediante rutas que
 aceptan parámetros opcionales a través de modelos basados en Pydantic.
 """
 from typing import List, Optional
-from fastapi import FastAPI, Depends, Query
+import io
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from clients.sesame_client import SesameAPIClient
+from auth.oauth import verify_secret_key
 
-# Inicializamos FastAPI
-app = FastAPI()
+
+# Router para Sesame
+sesame_router = APIRouter()
 
 # Inicializamos el cliente de SesameAPI
 sesame_client = SesameAPIClient()
@@ -336,7 +340,9 @@ def get_time_entries_query_params(
 
 
 # Rutas de la API utilizando el cliente de SesameAPI
-@app.get("/sesame/info")
+@sesame_router.get("/info",
+                   tags=["Sesame Info"],
+                   dependencies=[Depends(verify_secret_key)])
 async def get_info():
     """
     Obtener la información de la cuenta de Sesame.
@@ -349,8 +355,12 @@ async def get_info():
     return sesame_client.get_info()
 
 
-@app.get("/sesame/employees")
-async def get_employees(query_params: EmployeeQueryParams = Depends(get_employee_query_params)):
+@sesame_router.get("/employees",
+                   tags=["Sesame Employees"],
+                   dependencies=[Depends(verify_secret_key)])
+async def get_employees(
+    query_params: EmployeeQueryParams = Depends(get_employee_query_params)
+):
     """
     Obtener una lista de empleados según los parámetros dados.
 
@@ -376,8 +386,51 @@ async def get_employees(query_params: EmployeeQueryParams = Depends(get_employee
         status=query_params.status
     )
 
+@sesame_router.get("/employees_csv",
+                   tags=["Sesame ETL"],
+                   dependencies=[Depends(verify_secret_key)])
+async def get_employees_csv(
+    query_params: EmployeeQueryParams = Depends(get_employee_query_params),
+):
+    """
+    Obtener un archivo de valores separados por comas de empleados 
+    según los parámetros dados.
 
-@app.get("/sesame/employees/{employee_id}")
+    Parámetros
+    ----------
+    query_params : EmployeeQueryParams
+        Parámetros de búsqueda de empleados.
+
+    Retorna
+    -------
+    texto: csv
+        La lista de empleados en formato CSV
+    """
+    # Llamar al método que devuelve el CSV
+    csv_data = sesame_client.get_employees_csv(
+        code=query_params.code,
+        dni=query_params.dni,
+        email=query_params.email,
+        department_ids=query_params.department_ids,
+        office_ids=query_params.office_ids,
+        limit=query_params.limit,
+        page=query_params.page,
+        order_by=query_params.order_by,
+        status=query_params.status
+    )
+
+    # Convertir el texto CSV a un stream y devolverlo como respuesta
+    response = StreamingResponse(
+        io.StringIO(csv_data),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=data.csv"}
+    )
+
+    return response
+
+@sesame_router.get("/employees/{employee_id}",
+                   tags=["Sesame Employees"],
+                   dependencies=[Depends(verify_secret_key)])
 async def get_employee_by_id(employee_id: str):
     """
     Obtener la información de un empleado por su ID.
@@ -395,8 +448,12 @@ async def get_employee_by_id(employee_id: str):
     return sesame_client.get_employee_by_id(employee_id)
 
 
-@app.get("/sesame/worked-hours")
-async def get_worked_hours(query_params: WorkedHoursQueryParams = Depends(get_worked_hours_query_params)):
+@sesame_router.get("/worked-hours",
+                   tags=["Sesame Employees"],
+                   dependencies=[Depends(verify_secret_key)])
+async def get_worked_hours(
+    query_params: WorkedHoursQueryParams = Depends(get_worked_hours_query_params)
+):
     """
     Obtener las horas trabajadas de empleados según los parámetros dados.
 
@@ -420,8 +477,12 @@ async def get_worked_hours(query_params: WorkedHoursQueryParams = Depends(get_wo
     )
 
 
-@app.get("/sesame/work-entries")
-async def get_work_entries(query_params: WorkEntriesQueryParams = Depends(get_work_entries_query_params)):
+@sesame_router.get("/work-entries",
+                   tags=["Sesame Employees"],
+                   dependencies=[Depends(verify_secret_key)])
+async def get_work_entries(
+    query_params: WorkEntriesQueryParams = Depends(get_work_entries_query_params)
+):
     """
     Obtener los fichajes de la compañía según los parámetros dados.
 
@@ -448,8 +509,12 @@ async def get_work_entries(query_params: WorkEntriesQueryParams = Depends(get_wo
     )
 
 
-@app.get("/sesame/time-entries")
-async def get_time_entries(query_params: TimeEntriesQueryParams = Depends(get_time_entries_query_params)):
+@sesame_router.get("/time-entries",
+                   tags=["Sesame Employees"],
+                   dependencies=[Depends(verify_secret_key)])
+async def get_time_entries(
+    query_params: TimeEntriesQueryParams = Depends(get_time_entries_query_params)
+):
     """
     Obtener las imputaciones de los empleados según los parámetros dados.
 
