@@ -30,11 +30,6 @@ stages:
           
           - script: |
               . venv/bin/activate
-              flake8 . --exit-zero
-            displayName: 'Linting'
-          
-          - script: |
-              . venv/bin/activate
               pytest --doctest-modules --junitxml=junit/test-results.xml --cov=. --cov-report=xml tests/
             env:
               SESAME_API_KEY: $(SESAME_API_KEY)  # Variable secreta en Azure Pipelines
