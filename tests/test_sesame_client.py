@@ -50,11 +50,11 @@ class TestSesameAPIClient(unittest.TestCase):
         seconds_to_work = response["data"][0]["secondsToWork"]
         self.assertEqual(seconds_to_work, self.seconds_to_work)
 
-    def test_get_worked_hours_df(self):
-        response = self.client.get_worked_hours_df(employee_ids=[self.employee_id],
+    def test_get_worked_hours_csv(self):
+        response = self.client.get_worked_hours_csv(employee_ids=[self.employee_id],
                                                   from_date=self.from_date,
                                                   to_date=self.to_date)
-        self.assertEqual(response.empty, False)
+        self.assertNotEqual(response, "")
 
     def test_get_work_entries(self):
         response = self.client.get_work_entries(employee_id=self.employee_id,
@@ -63,11 +63,11 @@ class TestSesameAPIClient(unittest.TestCase):
         worked_seconds = response["data"][0]["workedSeconds"]
         self.assertEqual(worked_seconds, self.worked_seconds)
 
-    def test_get_work_entries_df(self):
-        response = self.client.get_work_entries_df(employee_id=self.employee_id,
+    def test_get_work_entries_csv(self):
+        response = self.client.get_work_entries_csv(employee_id=self.employee_id,
                                                   from_date=self.from_date,
                                                   to_date=self.to_date)
-        self.assertEqual(response.empty, False)
+        self.assertNotEqual(response, "")
 
     def test_get_time_entries(self):
         response = self.client.get_time_entries(employee_id=self.employee_id,
@@ -76,11 +76,11 @@ class TestSesameAPIClient(unittest.TestCase):
         comment = response["data"][0]["comment"]
         self.assertEqual(comment, self.comment)
 
-    def test_get_time_entries_df(self):
-        response = self.client.get_time_entries_df(employee_id=self.employee_id,
+    def test_get_time_entries_csv(self):
+        response = self.client.get_time_entries_csv(employee_id=self.employee_id,
                                                   from_date=self.from_date,
                                                   to_date=self.to_date)
-        self.assertEqual(response.empty, False)
+        self.assertNotEqual(response, "")
 
 
 if __name__ == '__main__':
