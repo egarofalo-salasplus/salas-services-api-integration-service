@@ -207,8 +207,8 @@ def get_employee_query_params(
 def get_worked_hours_query_params(
     employee_ids: Optional[List[str]] = Query(None),
     with_checks: Optional[bool] = Query(None),
-    from_date: str = Query(...),
-    to_date: str = Query(...),
+    from_date: Optional[str] = Query(..., description="yyyy-mm-dd"),
+    to_date: Optional[str] = Query(..., description="yyyy-mm-dd"),
     limit: Optional[int] = Query(None),
     page: Optional[int] = Query(None)
 ) -> WorkedHoursQueryParams:
@@ -247,8 +247,8 @@ def get_worked_hours_query_params(
 
 def get_work_entries_query_params(
     employee_id: Optional[str] = Query(None),
-    from_date: Optional[str] = Query(None),
-    to_date: Optional[str] = Query(None),
+    from_date: Optional[str] = Query(None, description="yyyy-mm-dd"),
+    to_date: Optional[str] = Query(None, description="yyyy-mm-dd"),
     updated_at_gte: Optional[str] = Query(None),
     updated_at_lte: Optional[str] = Query(None),
     only_return: Optional[str] = Query(None),
@@ -300,8 +300,8 @@ def get_work_entries_query_params(
 
 def get_time_entries_query_params(
     employee_id: Optional[str] = Query(None),
-    from_date: Optional[str] = Query(None),
-    to_date: Optional[str] = Query(None),
+    from_date: Optional[str] = Query(None, description="yyyy-mm-dd"),
+    to_date: Optional[str] = Query(None, description="yyyy-mm-dd"),
     employee_status: Optional[str] = Query(None),
     limit: Optional[int] = Query(None),
     page: Optional[int] = Query(None)
@@ -386,7 +386,7 @@ async def get_employees(
         status=query_params.status
     )
 
-@sesame_router.get("/employees_csv",
+@sesame_router.get("/employees-csv",
                    tags=["Sesame ETL"],
                    dependencies=[Depends(verify_secret_key)])
 async def get_employees_csv(
@@ -423,7 +423,7 @@ async def get_employees_csv(
     response = StreamingResponse(
         io.StringIO(csv_data),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=data.csv"}
+        headers={"Content-Disposition": "attachment; filename=employees.csv"}
     )
 
     return response
@@ -449,7 +449,7 @@ async def get_employee_by_id(employee_id: str):
 
 
 @sesame_router.get("/worked-hours",
-                   tags=["Sesame Employees"],
+                   tags=["Sesame Statistics (Horas teóricas)"],
                    dependencies=[Depends(verify_secret_key)])
 async def get_worked_hours(
     query_params: WorkedHoursQueryParams = Depends(get_worked_hours_query_params)
@@ -476,9 +476,45 @@ async def get_worked_hours(
         page=query_params.page
     )
 
+@sesame_router.get("/worked-hours-csv",
+                   tags=["Sesame ETL"],
+                   dependencies=[Depends(verify_secret_key)])
+async def get_worked_hours_csv(
+    query_params: WorkedHoursQueryParams = Depends(get_worked_hours_query_params)
+):
+    """
+    Obtener las horas trabajadas de empleados según los parámetros dados.
+
+    Parámetros
+    ----------
+    query_params : WorkedHoursQueryParams
+        Parámetros de búsqueda de horas trabajadas.
+
+    Retorna
+    -------
+    dict
+        Las horas trabajadas en formato JSON.
+    """
+    csv_data = sesame_client.get_worked_hours_csv(
+        employee_ids=query_params.employee_ids,
+        with_checks=query_params.with_checks,
+        from_date=query_params.from_date,
+        to_date=query_params.to_date,
+        limit=query_params.limit,
+        page=query_params.page
+    )
+    
+    # Convertir el texto CSV a un stream y devolverlo como respuesta
+    response = StreamingResponse(
+        io.StringIO(csv_data),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=worked-hours.csv"}
+    )
+
+    return response
 
 @sesame_router.get("/work-entries",
-                   tags=["Sesame Employees"],
+                   tags=["Sesame Work Entries (Fichajes)"],
                    dependencies=[Depends(verify_secret_key)])
 async def get_work_entries(
     query_params: WorkEntriesQueryParams = Depends(get_work_entries_query_params)
@@ -508,9 +544,48 @@ async def get_work_entries(
         order_by=query_params.order_by
     )
 
+@sesame_router.get("/work-entries-csv",
+                   tags=["Sesame ETL"],
+                   dependencies=[Depends(verify_secret_key)])
+async def get_work_entries_csv(
+    query_params: WorkEntriesQueryParams = Depends(get_work_entries_query_params)
+):
+    """
+    Obtener los fichajes de la compañía según los parámetros dados.
+
+    Parámetros
+    ----------
+    query_params : WorkEntriesQueryParams
+        Parámetros de búsqueda de fichajes.
+
+    Retorna
+    -------
+    texto: csv
+        Los fichajes en formato CSV.
+    """
+    csv_data = sesame_client.get_work_entries_csv(
+        employee_id=query_params.employee_id,
+        from_date=query_params.from_date,
+        to_date=query_params.to_date,
+        updated_at_gte=query_params.updated_at_gte,
+        updated_at_lte=query_params.updated_at_lte,
+        only_return=query_params.only_return,
+        limit=query_params.limit,
+        page=query_params.page,
+        order_by=query_params.order_by
+    )
+
+    # Convertir el texto CSV a un stream y devolverlo como respuesta
+    response = StreamingResponse(
+        io.StringIO(csv_data),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=work-entries.csv"}
+    )
+
+    return response
 
 @sesame_router.get("/time-entries",
-                   tags=["Sesame Employees"],
+                   tags=["Sesame Time Entries (Imputaciones)"],
                    dependencies=[Depends(verify_secret_key)])
 async def get_time_entries(
     query_params: TimeEntriesQueryParams = Depends(get_time_entries_query_params)
@@ -536,3 +611,40 @@ async def get_time_entries(
         limit=query_params.limit,
         page=query_params.page
     )
+    
+@sesame_router.get("/time-entries-csv",
+                   tags=["Sesame ETL"],
+                   dependencies=[Depends(verify_secret_key)])
+async def get_time_entries_csv(
+    query_params: TimeEntriesQueryParams = Depends(get_time_entries_query_params)
+):
+    """
+    Obtener las imputaciones de los empleados según los parámetros dados.
+
+    Parámetros
+    ----------
+    query_params : TimeEntriesQueryParams
+        Parámetros de búsqueda de imputaciones.
+
+    Retorna
+    -------
+    text: csv
+        Las imputaciones en formato CSV.
+    """
+    csv_data = sesame_client.get_time_entries_csv(
+        employee_id=query_params.employee_id,
+        from_date=query_params.from_date,
+        to_date=query_params.to_date,
+        employee_status=query_params.employee_status,
+        limit=query_params.limit,
+        page=query_params.page
+    )
+
+    # Convertir el texto CSV a un stream y devolverlo como respuesta
+    response = StreamingResponse(
+        io.StringIO(csv_data),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=time-entries.csv"}
+    )
+
+    return response

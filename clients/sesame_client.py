@@ -115,9 +115,10 @@ class SesameAPIClient:
                                 timeout=5000)
         return response.json()
 
+    
     def get_employees_csv(self, code=None, dni=None, email=None,
-                         department_ids=None, office_ids=None, limit=None,
-                         page=None, order_by=None, status=None):
+                          department_ids=None, office_ids=None, limit=None,
+                          page=None, order_by=None, status=None):
         """
         Obtener un csv de empleados basada en los parámetros dados
 
@@ -261,7 +262,6 @@ class SesameAPIClient:
 
         except requests.exceptions.RequestException as e:
             print(f"Error en la solicitud: {e}")
-            # Retorna un DataFrame vacío en caso de error
             return ""
 
     def get_employee_by_id(self, employee_id):
@@ -327,8 +327,9 @@ class SesameAPIClient:
                                 timeout=5000)
         return response.json()
     
-    def get_worked_hours_df(self, employee_ids=None, with_checks=None,
-                            from_date=None, to_date=None, limit=None, page=None):
+    def get_worked_hours_csv(self, employee_ids=None, with_checks=None,
+                             from_date=None, to_date=None, limit=None,
+                             page=None):
         """
         Obtener las horas trabajadas por los empleados según los parámetros
         dados. De los datos devueltos se pueden obtener las horas teóricas.
@@ -365,19 +366,61 @@ class SesameAPIClient:
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
 
-        response = requests.get(url, headers=self.headers, params=params,
-                                timeout=5000)
+        # Si no se indica la página, obtenerlas todas
+        records = []
+        try:
+            if page is None:
+                page = 1
+                while True:
+                    params = {
+                        "employeeIds[in]": employee_ids,
+                        "withChecks": with_checks,
+                        "from": from_date,
+                        "to": to_date,
+                        "limit": limit,
+                        "page": page
+                    }
+                    response = requests.get(url,
+                                            headers=self.headers,
+                                            params=params,
+                                            timeout=5000)
+                    
+                    response.raise_for_status()
 
-        # Verificar si la solicitud fue exitosa
-        response.raise_for_status()
+                    data = response.json()
 
-        # Parsear la respuesta JSON
-        data = response.json()
+                    if not data["data"]:
+                        break
 
-        # Extrear la porsión de los datos que alimentarán el DataFrame
-        records = data.get("data", [])
-        df = pd.DataFrame(records)
-        return df
+                    records.extend(data["data"])
+                    
+                    page += 1
+        
+            response = requests.get(url, headers=self.headers, params=params,
+                                    timeout=5000)
+
+            # Verificar si la solicitud fue exitosa
+            response.raise_for_status()
+
+            # Parsear la respuesta JSON
+            data = response.json()
+
+            # Extrear la porsión de los datos que alimentarán el DataFrame
+            if not records:
+                records = data.get("data", [])
+
+            df = pd.DataFrame(records)
+
+            # Convertir el DataFrame a un formato CSV en un string
+            output = io.StringIO()
+            df.to_csv(output, index=False)
+
+            return output.getvalue()
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error en la solicitud: {e}")
+            return ""
+
 
     def get_work_entries(self, employee_id=None, from_date=None, to_date=None,
                          updated_at_gte=None, updated_at_lte=None,
@@ -432,10 +475,10 @@ class SesameAPIClient:
                                 timeout=5000)
         return response.json()
 
-    def get_work_entries_df(self, employee_id=None, from_date=None, to_date=None,
-                            updated_at_gte=None, updated_at_lte=None,
-                            only_return=None, limit=None, page=None,
-                            order_by=None):
+    def get_work_entries_csv(self, employee_id=None, from_date=None,
+                             to_date=None, updated_at_gte=None,
+                             updated_at_lte=None, only_return=None,
+                             limit=None, page=None, order_by=None):
         """
         Obtener los fichajes de la compañía
 
@@ -464,8 +507,8 @@ class SesameAPIClient:
 
         Retorna
         -------
-        pandas.DataFrame
-            DataFrame con los fichajes realizados.
+        text: csv
+            Texto con valores de los fichajes realizados.
         """
         url = f"{self.base_url}/schedule/v1/work-entries"
         params = {
@@ -481,7 +524,41 @@ class SesameAPIClient:
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
+
+        # Si no se especifica la página, obtenerlas todas
+        records = []
         try:
+            if page is None:
+                page = 1
+                while True:
+                    params = {
+                        "employeeId": employee_id,
+                        "from": from_date,
+                        "to": to_date,
+                        "updatedAt[gte]": updated_at_gte,
+                        "updatedAt[lte]": updated_at_lte,
+                        "onlyReturn": only_return,
+                        "limit": limit,
+                        "page": page,
+                        "orderBy": order_by
+                    }
+                    response = requests.get(url,
+                                            headers=self.headers,
+                                            params=params,
+                                            timeout=5000)
+                    # Verificar si la solicitud fue exitosa
+                    response.raise_for_status()
+
+                    # Parsear la respuesta JSON
+                    data = response.json()
+
+                    if not data["data"]:
+                        break
+
+                    records.extend(data["data"])
+
+                    page += 1
+
             response = requests.get(url, headers=self.headers, params=params,
                                     timeout=5000)
 
@@ -492,7 +569,8 @@ class SesameAPIClient:
             data = response.json()
 
             # Extrear la porsión de los datos que alimentarán el DataFrame
-            records = data.get("data", [])
+            if not records:
+                records = data.get("data", [])
 
             # Crear una lista de registros planos para cada empleado
             flat_records = []
@@ -503,19 +581,23 @@ class SesameAPIClient:
                     'employee_id': record.get('employee')["id"],
                     'work_entry_type': record.get('workEntryType'),
                     'worked_seconds': record.get('workedSeconds'),
-                    'work_entry_in_datetime': record.get('workEntryIn', [])['date'],
-                    'work_entry_out_datetime': record.get('workEntryOut', [])['date'],
+                    'work_entry_in_datetime': record.get('workEntryIn')['date'],
+                    'work_entry_out_datetime': record.get('workEntryOut')['date'],
                     'work_break_id': record.get('workBreakId'),
                 }
                 flat_records.append(flat_record)
 
             df = pd.DataFrame(flat_records)
-            return df
+
+            # Convertir el DataFrame a un formato CSV en un string
+            output = io.StringIO()
+            df.to_csv(output, index=False)
+
+            return output.getvalue()
 
         except requests.exceptions.RequestException as e:
             print(f"Error en la solicitud: {e}")
-            # Retorna un DataFrame vacío en caso de error
-            return pd.DataFrame()
+            return ""
 
     def get_time_entries(self, employee_id=None, from_date=None, to_date=None,
                          employee_status=None, limit=None, page=None):
@@ -559,8 +641,9 @@ class SesameAPIClient:
                                 timeout=5000)
         return response.json()
 
-    def get_time_entries_df(self, employee_id=None, from_date=None, to_date=None,
-                         employee_status=None, limit=None, page=None):
+    def get_time_entries_csv(self, employee_id=None, from_date=None,
+                             to_date=None, employee_status=None, limit=None,
+                             page=None):
         """
         Obtener las imputaciones de los empleados basadas en los parámetros
         dados.
@@ -583,8 +666,8 @@ class SesameAPIClient:
 
         Retorna
         -------
-        pandas.DataFrame
-            DataFrame con las entradas de tiempo.
+        text: csv
+            CSV con las entradas de tiempo.
         """
         url = f"{self.base_url}/project/v1/time-entries"
         params = {
@@ -599,7 +682,39 @@ class SesameAPIClient:
         params = {k: v for k, v in params.items() if v is not None}
         response = requests.get(url, headers=self.headers, params=params,
                                 timeout=5000)
+        
+        # Si no se especifica la página, devolverlas todas
+        records = []
         try:
+            if page is None:
+                page = 1
+                while True:
+                    params = {
+                        "employeeId": employee_id,
+                        "from": from_date,
+                        "to": to_date,
+                        "employeeStatus": employee_status,
+                        "limit": limit,
+                        "page": page
+                    }
+                    response = requests.get(url,
+                                            headers=self.headers,
+                                            params=params,
+                                            timeout=5000)
+
+                    # Verificar si la solicitud fue exitosa
+                    response.raise_for_status()
+
+                    # Parsear la respuesta JSON
+                    data = response.json()
+
+                    if not data["data"]:
+                        break
+
+                    records.extend(data["data"])
+
+                    page += 1
+
             response = requests.get(url, headers=self.headers, params=params,
                                     timeout=5000)
 
@@ -610,7 +725,8 @@ class SesameAPIClient:
             data = response.json()
 
             # Extrear la porsión de los datos que alimentarán el DataFrame
-            records = data.get("data", [])
+            if not records:
+                records = data.get("data", [])
 
             # Crear una lista de registros planos para cada empleado
             flat_records = []
@@ -635,9 +751,14 @@ class SesameAPIClient:
                 flat_records.append(flat_record)
 
             df = pd.DataFrame(flat_records)
-            return df
+            
+            # Convertir el DataFrame a un formato CSV en un string
+            output = io.StringIO()
+            df.to_csv(output, index=False)
+
+            return output.getvalue()
 
         except requests.exceptions.RequestException as e:
             print(f"Error en la solicitud: {e}")
             # Retorna un DataFrame vacío en caso de error
-            return pd.DataFrame()
+            return ""

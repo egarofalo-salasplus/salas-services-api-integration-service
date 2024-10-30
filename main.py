@@ -3,7 +3,7 @@ from routers import sesame_router
 
 
 app = FastAPI(
-    title="API Publica de Salas",
+    title="API Pública de Salas",
     description="API para conexión con soluciones externas.",
     version="1.0.0"
 )
