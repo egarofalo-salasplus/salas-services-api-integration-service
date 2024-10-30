@@ -3,9 +3,9 @@ from routers import sesame_router
 
 
 app = FastAPI(
-    title="API Pública de Salas",
+    title="Salas API Integration",
     description="API para conexión con soluciones externas.",
-    version="1.0.0"
+    version="1.1.0"
 )
 
 # Incluimos los routers en la app principal
