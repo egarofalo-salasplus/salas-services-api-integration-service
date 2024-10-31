@@ -168,6 +168,7 @@ class SesameAPIClient:
         try:
             if page is None:
                 page = 1
+                limit = 100
                 while True:
                     params = {
                         "code": code,
@@ -371,6 +372,7 @@ class SesameAPIClient:
         try:
             if page is None:
                 page = 1
+                limit = 100
                 while True:
                     params = {
                         "employeeIds[in]": employee_ids,
@@ -530,6 +532,7 @@ class SesameAPIClient:
         try:
             if page is None:
                 page = 1
+                limit = 100
                 while True:
                     params = {
                         "employeeId": employee_id,
@@ -688,6 +691,7 @@ class SesameAPIClient:
         try:
             if page is None:
                 page = 1
+                limit = 100
                 while True:
                     params = {
                         "employeeId": employee_id,
@@ -739,10 +743,16 @@ class SesameAPIClient:
                     if i + 1 < len(record.get('tags')["data"]):
                         tags += ","
 
+                project = ""
+                if record.get('project') is None:
+                    project = "No especificado"
+                else:
+                    project = record.get('project')["name"]
+
                 flat_record = {
                     'id': record.get('id'),
                     'employee_id': record.get('employee')["id"],
-                    'project': record.get('project')["name"],
+                    'project': project,
                     'time_entry_in_datetime': record.get('timeEntryIn')["date"],
                     'time_entry_out_datetime': record.get('timeEntryOut')["date"],
                     'tags': tags,
