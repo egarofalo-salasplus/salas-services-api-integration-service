@@ -938,7 +938,9 @@ class SesameAPIClient:
                     'department_id': record.get('department')["id"],
                     'department_name': record.get('department')["name"],
                     'company_id': record.get('employee')["company"]["id"],
-                    'company_name': record.get('employee')["company"]["name"]
+                    'company_name': record.get('employee')["company"]["name"],
+                    'created_at': record.get('createdAt'),
+                    'updated_at': record.get('updatedAt')
                 }
                 flat_records.append(flat_record)
 
