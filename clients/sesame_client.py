@@ -14,6 +14,23 @@ import io
 import os
 
 
+# Secret keys para las diversas empresas
+plushabit_key = config("SESAME_API_KEY",
+                       default=os.getenv("SESAME_API_KEY"))
+
+construhabit_key = config("SESAME_CONSTRUHABIT_API_KEY",
+                          default=os.getenv("SESAME_CONSTRUHABIT_API_KEY"))
+
+greenpower_key = config("SESAME_GREENPOWER_API_KEY",
+                        default=os.getenv("SESAME_GREENPOWER_API_KEY"))
+
+noulloc_key = config("SESAME_NOULLOC_API_KEY",
+                     default=os.getenv("SESAME_NOULLOC_API_KEY"))
+
+# Lista de clientes para todas las empresas
+all_api_keys = [plushabit_key, construhabit_key, greenpower_key, noulloc_key]
+
+
 class SesameAPIClient:
     class SesameAPIClient:
         """
@@ -37,13 +54,11 @@ class SesameAPIClient:
             y tipo de contenido.
         """
 
-    def __init__(self, company_token=None):
+    def __init__(self):
         self.region = "eu1"
         self.base_url = f"https://api-{self.region}.sesametime.com"
-        if company_token is None:
-            self.api_key = config("SESAME_API_KEY", default=os.getenv("SESAME_API_KEY"))
-        else:
-            self.api_key = company_token
+        self.api_key = plushabit_key
+        self.all_api_keys = all_api_keys
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
@@ -61,7 +76,7 @@ class SesameAPIClient:
         """
         url = f"{self.base_url}/core/v3/info"
         response = requests.get(url, headers=self.headers, timeout=5000)
-        return response.json()
+        return response
 
     # Métodos para la sección "Employees"
     def get_employees(self, code=None, dni=None, email=None,
@@ -113,9 +128,8 @@ class SesameAPIClient:
         params = {k: v for k, v in params.items() if v is not None}
         response = requests.get(url, headers=self.headers, params=params,
                                 timeout=5000)
-        return response.json()
+        return response
 
-    
     def get_employees_csv(self, code=None, dni=None, email=None,
                           department_ids=None, office_ids=None, limit=None,
                           page=None, order_by=None, status=None):
@@ -147,7 +161,7 @@ class SesameAPIClient:
         Retorna
         -------
         text: csv
-            Texto con valores separados por comas con los datos de los 
+            Texto con valores separados por comas con los datos de los
             emmpleados.
         """
         url = f"{self.base_url}/core/v3/employees"
@@ -167,33 +181,38 @@ class SesameAPIClient:
         records = []
         try:
             if page is None:
-                page = 1
-                limit = 100
-                while True:
-                    params = {
-                        "code": code,
-                        "dni": dni,
-                        "email": email,
-                        "departmentIds": department_ids,
-                        "officeIds": office_ids,
-                        "limit": limit,
-                        "page": page,
-                        "orderBy": order_by,
-                        "status": status
+                for key in self.all_api_keys:
+                    headers = {
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json"
                     }
-                    response = requests.get(url, headers=self.headers,
-                                            params=params, timeout=5000)
+                    page = 1
+                    limit = 100
+                    while True:
+                        params = {
+                            "code": code,
+                            "dni": dni,
+                            "email": email,
+                            "departmentIds": department_ids,
+                            "officeIds": office_ids,
+                            "limit": limit,
+                            "page": page,
+                            "orderBy": order_by,
+                            "status": status
+                        }
+                        response = requests.get(url, headers=headers,
+                                                params=params, timeout=5000)
 
-                    response.raise_for_status()
+                        response.raise_for_status()
 
-                    data = response.json()
+                        data = response.json()
 
-                    if not data["data"]:
-                        break
+                        if not data["data"]:
+                            break
 
-                    records.extend(data["data"])
-                    
-                    page += 1
+                        records.extend(data["data"])
+
+                        page += 1
 
             response = requests.get(url, headers=self.headers, params=params,
                                     timeout=5000)
@@ -284,7 +303,7 @@ class SesameAPIClient:
         }
         response = requests.get(url, headers=self.headers, params=params,
                                 timeout=5000)
-        return response.json()
+        return response
 
     # Sección Statistics
     def get_worked_hours(self, employee_ids=None, with_checks=None,
@@ -326,7 +345,7 @@ class SesameAPIClient:
         params = {k: v for k, v in params.items() if v is not None}
         response = requests.get(url, headers=self.headers, params=params,
                                 timeout=5000)
-        return response.json()
+        return response
     
     def get_worked_hours_csv(self, employee_ids=None, with_checks=None,
                              from_date=None, to_date=None, limit=None,
@@ -371,32 +390,37 @@ class SesameAPIClient:
         records = []
         try:
             if page is None:
-                page = 1
-                limit = 100
-                while True:
-                    params = {
-                        "employeeIds[in]": employee_ids,
-                        "withChecks": with_checks,
-                        "from": from_date,
-                        "to": to_date,
-                        "limit": limit,
-                        "page": page
+                for key in self.all_api_keys:
+                    headers = {
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json"
                     }
-                    response = requests.get(url,
-                                            headers=self.headers,
-                                            params=params,
-                                            timeout=5000)
-                    
-                    response.raise_for_status()
+                    page = 1
+                    limit = 100
+                    while True:
+                        params = {
+                            "employeeIds[in]": employee_ids,
+                            "withChecks": with_checks,
+                            "from": from_date,
+                            "to": to_date,
+                            "limit": limit,
+                            "page": page
+                        }
+                        response = requests.get(url,
+                                                headers=self.headers,
+                                                params=params,
+                                                timeout=5000)
+                        
+                        response.raise_for_status()
 
-                    data = response.json()
+                        data = response.json()
 
-                    if not data["data"]:
-                        break
+                        if not data["data"]:
+                            break
 
-                    records.extend(data["data"])
-                    
-                    page += 1
+                        records.extend(data["data"])
+                        
+                        page += 1
         
             response = requests.get(url, headers=self.headers, params=params,
                                     timeout=5000)
@@ -422,7 +446,6 @@ class SesameAPIClient:
         except requests.exceptions.RequestException as e:
             print(f"Error en la solicitud: {e}")
             return ""
-
 
     def get_work_entries(self, employee_id=None, from_date=None, to_date=None,
                          updated_at_gte=None, updated_at_lte=None,
@@ -475,7 +498,7 @@ class SesameAPIClient:
         params = {k: v for k, v in params.items() if v is not None}
         response = requests.get(url, headers=self.headers, params=params,
                                 timeout=5000)
-        return response.json()
+        return response
 
     def get_work_entries_csv(self, employee_id=None, from_date=None,
                              to_date=None, updated_at_gte=None,
@@ -531,36 +554,41 @@ class SesameAPIClient:
         records = []
         try:
             if page is None:
-                page = 1
-                limit = 100
-                while True:
-                    params = {
-                        "employeeId": employee_id,
-                        "from": from_date,
-                        "to": to_date,
-                        "updatedAt[gte]": updated_at_gte,
-                        "updatedAt[lte]": updated_at_lte,
-                        "onlyReturn": only_return,
-                        "limit": limit,
-                        "page": page,
-                        "orderBy": order_by
+                for key in self.all_api_keys:
+                    headers = {
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json"
                     }
-                    response = requests.get(url,
-                                            headers=self.headers,
-                                            params=params,
-                                            timeout=5000)
-                    # Verificar si la solicitud fue exitosa
-                    response.raise_for_status()
+                    page = 1
+                    limit = 100
+                    while True:
+                        params = {
+                            "employeeId": employee_id,
+                            "from": from_date,
+                            "to": to_date,
+                            "updatedAt[gte]": updated_at_gte,
+                            "updatedAt[lte]": updated_at_lte,
+                            "onlyReturn": only_return,
+                            "limit": limit,
+                            "page": page,
+                            "orderBy": order_by
+                        }
+                        response = requests.get(url,
+                                                headers=self.headers,
+                                                params=params,
+                                                timeout=5000)
+                        # Verificar si la solicitud fue exitosa
+                        response.raise_for_status()
 
-                    # Parsear la respuesta JSON
-                    data = response.json()
+                        # Parsear la respuesta JSON
+                        data = response.json()
 
-                    if not data["data"]:
-                        break
+                        if not data["data"]:
+                            break
 
-                    records.extend(data["data"])
+                        records.extend(data["data"])
 
-                    page += 1
+                        page += 1
 
             response = requests.get(url, headers=self.headers, params=params,
                                     timeout=5000)
@@ -642,7 +670,7 @@ class SesameAPIClient:
         params = {k: v for k, v in params.items() if v is not None}
         response = requests.get(url, headers=self.headers, params=params,
                                 timeout=5000)
-        return response.json()
+        return response
 
     def get_time_entries_csv(self, employee_id=None, from_date=None,
                              to_date=None, employee_status=None, limit=None,
@@ -690,34 +718,39 @@ class SesameAPIClient:
         records = []
         try:
             if page is None:
-                page = 1
-                limit = 100
-                while True:
-                    params = {
-                        "employeeId": employee_id,
-                        "from": from_date,
-                        "to": to_date,
-                        "employeeStatus": employee_status,
-                        "limit": limit,
-                        "page": page
+                for key in self.all_api_keys:
+                    headers = {
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json"
                     }
-                    response = requests.get(url,
-                                            headers=self.headers,
-                                            params=params,
-                                            timeout=5000)
+                    page = 1
+                    limit = 100
+                    while True:
+                        params = {
+                            "employeeId": employee_id,
+                            "from": from_date,
+                            "to": to_date,
+                            "employeeStatus": employee_status,
+                            "limit": limit,
+                            "page": page
+                        }
+                        response = requests.get(url,
+                                                headers=self.headers,
+                                                params=params,
+                                                timeout=5000)
 
-                    # Verificar si la solicitud fue exitosa
-                    response.raise_for_status()
+                        # Verificar si la solicitud fue exitosa
+                        response.raise_for_status()
 
-                    # Parsear la respuesta JSON
-                    data = response.json()
+                        # Parsear la respuesta JSON
+                        data = response.json()
 
-                    if not data["data"]:
-                        break
+                        if not data["data"]:
+                            break
 
-                    records.extend(data["data"])
+                        records.extend(data["data"])
 
-                    page += 1
+                        page += 1
 
             response = requests.get(url, headers=self.headers, params=params,
                                     timeout=5000)
@@ -761,7 +794,156 @@ class SesameAPIClient:
                 flat_records.append(flat_record)
 
             df = pd.DataFrame(flat_records)
-            
+
+            # Convertir el DataFrame a un formato CSV en un string
+            output = io.StringIO()
+            df.to_csv(output, index=False)
+
+            return output.getvalue()
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error en la solicitud: {e}")
+            # Retorna un DataFrame vacío en caso de error
+            return ""
+
+    def get_employee_department_assignations(self, employee_id=None,
+                                             department_id=None,
+                                             limit=None, page=None):
+        """
+        Obtener las asignaciones a departamentos por empleado.
+
+        Parámetros
+        ----------
+        employee_id : str, opcional
+            El ID del empleado (UUID).
+        department_id : str, opcional
+            El ID del departamento
+        limit : int, opcional
+            Limitar el número de resultados.
+        page : int, opcional
+            Solicitar una página específica de resultados.
+
+        Retorna
+        -------
+        dict
+            La respuesta en formato JSON de la API con las asignaciones de
+            departamentos.
+        """
+        url = f"{self.base_url}/core/v3/employee-department-assignations"
+        params = {
+            "employeeId": employee_id,
+            "departmentId": department_id,
+            "limit": limit,
+            "page": page
+        }
+        # Eliminar parámetros nulos
+        params = {k: v for k, v in params.items() if v is not None}
+        response = requests.get(url, headers=self.headers, params=params,
+                                timeout=5000)
+        return response
+
+    def get_employee_department_assignations_csv(
+        self, employee_id=None,
+        department_id=None,
+        limit=None,
+        page=None):
+        """
+        Obtener las asignaciones a departamentos por empleado.
+
+        Parámetros
+        ----------
+        employee_id : str, opcional
+            El ID del empleado (UUID).
+        department_id : str, opcional
+            El ID del departamento
+        limit : int, opcional
+            Limitar el número de resultados.
+        page : int, opcional
+            Solicitar una página específica de resultados.
+
+        Retorna
+        -------
+        text: csv
+            La respuesta en formato CSV de la API con las asignaciones de
+            departamentos.
+        """
+        url = f"{self.base_url}/core/v3/employee-department-assignations"
+        params = {
+            "employeeId": employee_id,
+            "departmentId": department_id,
+            "limit": limit,
+            "page": page
+        }
+        # Eliminar parámetros nulos
+        params = {k: v for k, v in params.items() if v is not None}
+        response = requests.get(url, headers=self.headers, params=params,
+                                timeout=5000)
+
+        # Si no se especifica la página, devolverlas todas
+        records = []
+        try:
+            if page is None:
+                for key in self.all_api_keys:
+                    headers = {
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json"
+                    }
+                    page = 1
+                    limit = 100
+                    while True:
+                        params = {
+                            "employeeId": employee_id,
+                            "departmentId": department_id,
+                            "limit": limit,
+                            "page": page
+                        }
+                        response = requests.get(url,
+                                                headers=self.headers,
+                                                params=params,
+                                                timeout=5000)
+
+                        # Verificar si la solicitud fue exitosa
+                        response.raise_for_status()
+
+                        # Parsear la respuesta JSON
+                        data = response.json()
+
+                        if not data["data"]:
+                            break
+
+                        records.extend(data["data"])
+
+                        page += 1
+
+            response = requests.get(url, headers=self.headers, params=params,
+                                    timeout=5000)
+
+            # Verificar si la solicitud fue exitosa
+            response.raise_for_status()
+
+            # Parsear la respuesta JSON
+            data = response.json()
+
+            # Extrear la porsión de los datos que alimentarán el DataFrame
+            if not records:
+                records = data.get("data", [])
+
+            # Crear una lista de registros planos para cada empleado
+            flat_records = []
+            for record in records:
+                # Datos a extraer
+                flat_record = {
+                    'id': record.get('id'),
+                    'employee_id': record.get('employee')["id"],
+                    'department_id': record.get('department')["id"],
+                    'department_name': record.get('department')["name"],
+                    'company_id': record.get('employee')["company"]["id"],
+                    'company_name': record.get('employee')["company"]["name"]
+                }
+                flat_records.append(flat_record)
+
+            df = pd.DataFrame(flat_records)
+
             # Convertir el DataFrame a un formato CSV en un string
             output = io.StringIO()
             df.to_csv(output, index=False)

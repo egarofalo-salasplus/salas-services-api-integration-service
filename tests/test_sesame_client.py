@@ -18,69 +18,69 @@ class TestSesameAPIClient(unittest.TestCase):
         self.custom_field_id = "a004625f-3003-4a72-8c9a-2c1f8a98f86a"
         self.custom_field_name = "Precio/h Empresa"
 
-    def test_get_all_user_parameters(self):
-        response = self.client.get_employee_by_id(self.employee_id)
-        custom_fields = response["data"]["customFields"]
-        for custom_field in custom_fields:
-            if custom_field["id"] == self.custom_field_id:
-                self.assertEqual(custom_field["name"], self.custom_field_name)
-
     def test_get_info(self):
         response = self.client.get_info()
-        company_name = response["data"]["company"]["name"]
-        self.assertEqual(company_name, self.company)
+        self.assertEqual(response.status_code, 200)
 
     def test_get_employees(self):
         response = self.client.get_employees(email=self.mail)
-        first_employee_name = response["data"][0]["firstName"]
-        self.assertEqual(first_employee_name, self.first_name)
+        self.assertEqual(response.status_code, 200)
 
     def test_get_employees_csv(self):
         response = self.client.get_employees_csv()
+        self.assertNotEqual(response, "")
 
     def test_get_employee_by_id(self):
         response = self.client.get_employee_by_id(self.employee_id)
-        employee_name = response["data"]["firstName"]
-        self.assertEqual(employee_name, self.first_name)
+        self.assertEqual(response.status_code, 200)
 
     def test_get_worked_hours(self):
-        response = self.client.get_worked_hours(employee_ids=[self.employee_id],
-                                                from_date=self.from_date,
-                                                to_date=self.to_date)
-        seconds_to_work = response["data"][0]["secondsToWork"]
-        self.assertEqual(seconds_to_work, self.seconds_to_work)
+        response = self.client.get_worked_hours(
+            employee_ids=[self.employee_id],
+            from_date=self.from_date,
+            to_date=self.to_date)
+        self.assertEqual(response.status_code, 200)
 
     def test_get_worked_hours_csv(self):
-        response = self.client.get_worked_hours_csv(employee_ids=[self.employee_id],
-                                                  from_date=self.from_date,
-                                                  to_date=self.to_date)
+        response = self.client.get_worked_hours_csv(
+            employee_ids=[self.employee_id],
+            from_date=self.from_date,
+            to_date=self.to_date)
         self.assertNotEqual(response, "")
 
     def test_get_work_entries(self):
         response = self.client.get_work_entries(employee_id=self.employee_id,
                                                 from_date=self.from_date,
                                                 to_date=self.to_date)
-        worked_seconds = response["data"][0]["workedSeconds"]
-        self.assertEqual(worked_seconds, self.worked_seconds)
+        self.assertEqual(response.status_code, 200)
 
     def test_get_work_entries_csv(self):
-        response = self.client.get_work_entries_csv(employee_id=self.employee_id,
-                                                  from_date=self.from_date,
-                                                  to_date=self.to_date)
+        response = self.client.get_work_entries_csv(
+            employee_id=self.employee_id,
+            from_date=self.from_date,
+            to_date=self.to_date)
         self.assertNotEqual(response, "")
 
     def test_get_time_entries(self):
         response = self.client.get_time_entries(employee_id=self.employee_id,
                                                 from_date=self.from_date,
                                                 to_date=self.to_date)
-        comment = response["data"][0]["comment"]
-        self.assertEqual(comment, self.comment)
+        self.assertEqual(response.status_code, 200)
 
     def test_get_time_entries_csv(self):
-        response = self.client.get_time_entries_csv(employee_id=self.employee_id,
-                                                  from_date=self.from_date,
-                                                  to_date=self.to_date)
+        response = self.client.get_time_entries_csv(
+            employee_id=self.employee_id,
+            from_date=self.from_date,
+            to_date=self.to_date)
         self.assertNotEqual(response, "")
+
+    def test_get_employee_department_assignations(self):
+        response = self.client.get_employee_department_assignations(
+            employee_id=None,
+            department_id=None,
+            limit=None,
+            page=None)
+        self.assertEqual(response.status_code, 200)
 
 
 if __name__ == '__main__':

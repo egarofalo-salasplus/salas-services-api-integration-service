@@ -150,6 +150,27 @@ class TimeEntriesQueryParams(BaseModel):
     page: Optional[int] = None
 
 
+class DepartmentAssignationQueryParams(BaseModel):
+    """
+    Modelo para los parámetros de consulta de asignación de departamentos.
+
+    Atributos
+    ----------
+    employee_id : str, opcional
+        ID del empleado (UUID).
+    department_id : str, opcional
+        Id del departamento
+    limit : int, opcional
+        Número máximo de resultados.
+    page : int, opcional
+        Número de página para la paginación.
+    """
+    employee_id: Optional[str] = None
+    department_id: Optional[str] = None
+    limit: Optional[int] = None
+    page: Optional[int] = None
+
+
 # Funciones para transformar los parámetros de consulta en modelos `BaseModel`
 def get_employee_query_params(
     code: Optional[int] = Query(None),
@@ -338,6 +359,38 @@ def get_time_entries_query_params(
         page=page
     )
 
+    
+def get_department_assignation_query_params(
+    employee_id: Optional[str] = Query(None),
+    department_id: Optional[str] = Query(None),
+    limit: Optional[int] = Query(None),
+    page: Optional[int] = Query(None)
+) -> DepartmentAssignationQueryParams:
+    """
+    Obtener los parámetros de consulta para empleados.
+
+    Parámetros
+    ----------
+    employee_id : str, opcional
+        ID del empleado (UUID).
+    department_id : str, opcional
+        Id del departamento
+    limit : int, opcional
+        Número máximo de resultados.
+    page : int, opcional
+        Número de página para la paginación.
+
+    Retorna
+    -------
+    EmployeeQueryParams
+        Instancia de EmployeeQueryParams con los valores especificados.
+    """
+    return DepartmentAssignationQueryParams(
+        employee_id=employee_id,
+        department_id=department_id,
+        limit=limit,
+        page=page
+    )
 
 # Rutas de la API utilizando el cliente de SesameAPI
 @sesame_router.get("/info",
@@ -352,7 +405,7 @@ async def get_info():
     dict
         La información de la cuenta en formato JSON.
     """
-    return sesame_client.get_info()
+    return sesame_client.get_info().json()
 
 
 @sesame_router.get("/employees",
@@ -384,7 +437,7 @@ async def get_employees(
         page=query_params.page,
         order_by=query_params.order_by,
         status=query_params.status
-    )
+    ).json()
 
 @sesame_router.get("/employees-csv",
                    tags=["Sesame ETL"],
@@ -393,7 +446,7 @@ async def get_employees_csv(
     query_params: EmployeeQueryParams = Depends(get_employee_query_params),
 ):
     """
-    Obtener un archivo de valores separados por comas de empleados 
+    Obtener un archivo de valores separados por comas de empleados
     según los parámetros dados.
 
     Parámetros
@@ -445,7 +498,7 @@ async def get_employee_by_id(employee_id: str):
     dict
         Los datos del empleado en formato JSON.
     """
-    return sesame_client.get_employee_by_id(employee_id)
+    return sesame_client.get_employee_by_id(employee_id).json()
 
 
 @sesame_router.get("/worked-hours",
@@ -474,7 +527,7 @@ async def get_worked_hours(
         to_date=query_params.to_date,
         limit=query_params.limit,
         page=query_params.page
-    )
+    ).json()
 
 @sesame_router.get("/worked-hours-csv",
                    tags=["Sesame ETL"],
@@ -503,7 +556,7 @@ async def get_worked_hours_csv(
         limit=query_params.limit,
         page=query_params.page
     )
-    
+
     # Convertir el texto CSV a un stream y devolverlo como respuesta
     response = StreamingResponse(
         io.StringIO(csv_data),
@@ -542,7 +595,7 @@ async def get_work_entries(
         limit=query_params.limit,
         page=query_params.page,
         order_by=query_params.order_by
-    )
+    ).json()
 
 @sesame_router.get("/work-entries-csv",
                    tags=["Sesame ETL"],
@@ -610,7 +663,7 @@ async def get_time_entries(
         employee_status=query_params.employee_status,
         limit=query_params.limit,
         page=query_params.page
-    )
+    ).json()
     
 @sesame_router.get("/time-entries-csv",
                    tags=["Sesame ETL"],
@@ -645,6 +698,67 @@ async def get_time_entries_csv(
         io.StringIO(csv_data),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=time-entries.csv"}
+    )
+
+    return response
+
+@sesame_router.get("/employee-department-assignations",
+                   tags=["Sesame Department Assignations"],
+                   dependencies=[Depends(verify_secret_key)])
+async def get_employee_department_assignations(
+    query_params: DepartmentAssignationQueryParams = Depends(get_department_assignation_query_params)
+):
+    """
+    Obtener las imputaciones de los empleados según los parámetros dados.
+
+    Parámetros
+    ----------
+    query_params : TimeEntriesQueryParams
+        Parámetros de búsqueda de imputaciones.
+
+    Retorna
+    -------
+    dict
+        Las imputaciones en formato JSON.
+    """            
+    return sesame_client.get_employee_department_assignations(
+        employee_id=query_params.employee_id,
+        department_id=query_params.department_id,
+        limit=query_params.limit,
+        page=query_params.page
+    ).json()
+
+@sesame_router.get("/employee-department-assignations-csv",
+                   tags=["Sesame ETL"],
+                   dependencies=[Depends(verify_secret_key)])
+async def get_employee_department_assignations(
+    query_params: DepartmentAssignationQueryParams = Depends(get_department_assignation_query_params)
+):
+    """
+    Obtener las imputaciones de los empleados según los parámetros dados.
+
+    Parámetros
+    ----------
+    query_params : TimeEntriesQueryParams
+        Parámetros de búsqueda de imputaciones.
+
+    Retorna
+    -------
+    dict
+        Las imputaciones en formato JSON.
+    """
+    csv_data = sesame_client.get_employee_department_assignations_csv(
+        employee_id=query_params.employee_id,
+        department_id=query_params.department_id,
+        limit=query_params.limit,
+        page=query_params.page
+    )
+
+    # Convertir el texto CSV a un stream y devolverlo como respuesta
+    response = StreamingResponse(
+        io.StringIO(csv_data),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=department_assignations.csv"}
     )
 
     return response
