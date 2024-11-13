@@ -76,7 +76,7 @@ class SesameAPIClient:
             La respuesta en formato JSON de la información de la cuenta
         """
         url = f"{self.base_url}/core/v3/info"
-        response = call_api_with_backoff(url, self.headers)
+        response = call_api_with_backoff(url, self.headers, params=None)
         return response
 
     # Métodos para la sección "Employees"
@@ -940,7 +940,7 @@ def call_api_with_backoff(endpoint, headers, params, max_retries=30):
                                 timeout=5000)
         # si hay contenido en la respuesta
         if response.status_code == 200 and response.text:
-            return response.json()
+            return response
         time.sleep(5 ** retries)  # Exponential backoff
         retries += 1
     return None  # Si no hay éxito después de varios intentos
