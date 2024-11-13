@@ -12,6 +12,7 @@ from decouple import config
 import pandas as pd
 import io
 import os
+import time
 
 
 # Secret keys para las diversas empresas
@@ -75,7 +76,7 @@ class SesameAPIClient:
             La respuesta en formato JSON de la información de la cuenta
         """
         url = f"{self.base_url}/core/v3/info"
-        response = requests.get(url, headers=self.headers, timeout=5000)
+        response = call_api_with_backoff(url, self.headers)
         return response
 
     # Métodos para la sección "Employees"
@@ -126,8 +127,7 @@ class SesameAPIClient:
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
-        response = requests.get(url, headers=self.headers, params=params,
-                                timeout=5000)
+        response = call_api_with_backoff(url, self.headers, params)
         return response
 
     def get_employees_csv(self, code=None, dni=None, email=None,
@@ -200,8 +200,7 @@ class SesameAPIClient:
                             "orderBy": order_by,
                             "status": status
                         }
-                        response = requests.get(url, headers=headers,
-                                                params=params, timeout=5000)
+                        response = call_api_with_backoff(url, headers, params)
 
                         response.raise_for_status()
 
@@ -214,8 +213,7 @@ class SesameAPIClient:
 
                         page += 1
 
-            response = requests.get(url, headers=self.headers, params=params,
-                                    timeout=5000)
+            response = call_api_with_backoff(url, self.headers, params)
 
             # Verificar si la solicitud fue exitosa
             response.raise_for_status()
@@ -301,8 +299,7 @@ class SesameAPIClient:
         params = {
             "id": employee_id
         }
-        response = requests.get(url, headers=self.headers, params=params,
-                                timeout=5000)
+        response = call_api_with_backoff(url, self.headers, params)
         return response
 
     # Sección Statistics
@@ -343,10 +340,9 @@ class SesameAPIClient:
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
-        response = requests.get(url, headers=self.headers, params=params,
-                                timeout=5000)
+        response = call_api_with_backoff(url, self.headers, params)
         return response
-    
+
     def get_worked_hours_csv(self, employee_ids=None, with_checks=None,
                              from_date=None, to_date=None, limit=None,
                              page=None):
@@ -406,10 +402,7 @@ class SesameAPIClient:
                             "limit": limit,
                             "page": page
                         }
-                        response = requests.get(url,
-                                                headers=self.headers,
-                                                params=params,
-                                                timeout=5000)
+                        response = call_api_with_backoff(url, headers, params)
                         
                         response.raise_for_status()
 
@@ -422,8 +415,7 @@ class SesameAPIClient:
                         
                         page += 1
         
-            response = requests.get(url, headers=self.headers, params=params,
-                                    timeout=5000)
+            response = call_api_with_backoff(url, self.headers, params)
 
             # Verificar si la solicitud fue exitosa
             response.raise_for_status()
@@ -496,8 +488,7 @@ class SesameAPIClient:
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
-        response = requests.get(url, headers=self.headers, params=params,
-                                timeout=5000)
+        response = call_api_with_backoff(url, self.headers, params)
         return response
 
     def get_work_entries_csv(self, employee_id=None, from_date=None,
@@ -573,10 +564,7 @@ class SesameAPIClient:
                             "page": page,
                             "orderBy": order_by
                         }
-                        response = requests.get(url,
-                                                headers=self.headers,
-                                                params=params,
-                                                timeout=5000)
+                        response = call_api_with_backoff(url, headers, params)
                         # Verificar si la solicitud fue exitosa
                         response.raise_for_status()
 
@@ -590,8 +578,7 @@ class SesameAPIClient:
 
                         page += 1
 
-            response = requests.get(url, headers=self.headers, params=params,
-                                    timeout=5000)
+            response = call_api_with_backoff(url, self.headers, params)
 
             # Verificar si la solicitud fue exitosa
             response.raise_for_status()
@@ -668,8 +655,7 @@ class SesameAPIClient:
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
-        response = requests.get(url, headers=self.headers, params=params,
-                                timeout=5000)
+        response = call_api_with_backoff(url, self.headers, params)
         return response
 
     def get_time_entries_csv(self, employee_id=None, from_date=None,
@@ -711,8 +697,7 @@ class SesameAPIClient:
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
-        response = requests.get(url, headers=self.headers, params=params,
-                                timeout=5000)
+        response = call_api_with_backoff(url, self.headers, params)
         
         # Si no se especifica la página, devolverlas todas
         records = []
@@ -734,10 +719,7 @@ class SesameAPIClient:
                             "limit": limit,
                             "page": page
                         }
-                        response = requests.get(url,
-                                                headers=self.headers,
-                                                params=params,
-                                                timeout=5000)
+                        response = call_api_with_backoff(url, headers, params)
 
                         # Verificar si la solicitud fue exitosa
                         response.raise_for_status()
@@ -752,8 +734,7 @@ class SesameAPIClient:
 
                         page += 1
 
-            response = requests.get(url, headers=self.headers, params=params,
-                                    timeout=5000)
+            response = call_api_with_backoff(url, self.headers, params)
 
             # Verificar si la solicitud fue exitosa
             response.raise_for_status()
@@ -838,8 +819,7 @@ class SesameAPIClient:
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
-        response = requests.get(url, headers=self.headers, params=params,
-                                timeout=5000)
+        response = call_api_with_backoff(url, self.headers, params)
         return response
 
     def get_employee_department_assignations_csv(
@@ -876,8 +856,7 @@ class SesameAPIClient:
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
-        response = requests.get(url, headers=self.headers, params=params,
-                                timeout=5000)
+        response = call_api_with_backoff(url, self.headers, params)
 
         # Si no se especifica la página, devolverlas todas
         records = []
@@ -897,10 +876,7 @@ class SesameAPIClient:
                             "limit": limit,
                             "page": page
                         }
-                        response = requests.get(url,
-                                                headers=self.headers,
-                                                params=params,
-                                                timeout=5000)
+                        response = call_api_with_backoff(url, headers, params)
 
                         # Verificar si la solicitud fue exitosa
                         response.raise_for_status()
@@ -915,8 +891,7 @@ class SesameAPIClient:
 
                         page += 1
 
-            response = requests.get(url, headers=self.headers, params=params,
-                                    timeout=5000)
+            response = call_api_with_backoff(url, self.headers, params)
 
             # Verificar si la solicitud fue exitosa
             response.raise_for_status()
@@ -956,3 +931,16 @@ class SesameAPIClient:
             print(f"Error en la solicitud: {e}")
             # Retorna un DataFrame vacío en caso de error
             return ""
+
+
+def call_api_with_backoff(endpoint, headers, params, max_retries=30):
+    retries = 0
+    while retries < max_retries:
+        response = requests.get(endpoint, headers=headers, params=params,
+                                timeout=5000)
+        # si hay contenido en la respuesta
+        if response.status_code == 200 and response.text:
+            return response.json()
+        time.sleep(5 ** retries)  # Exponential backoff
+        retries += 1
+    return None  # Si no hay éxito después de varios intentos
