@@ -6,6 +6,8 @@ import pandas as pd
 import os
 import time
 import requests
+from fastapi.testclient import TestClient
+
 
 secret_key = config("SALAS_API_KEY", default=os.getenv("SALAS_API_KEY"))
 

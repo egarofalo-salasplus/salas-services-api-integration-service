@@ -1,10 +1,13 @@
 import os
+from io import StringIO
 import logging
 import time
 import pandas as pd
+from fastapi.responses import StreamingResponse
 from sqlalchemy import create_engine, inspect
 from decouple import config
 from shared.utils import get_api_integration_csv
+from clients.sesame_client import SesameAPIClient
 
 
 # Secret keys para las diversas empresas
@@ -14,11 +17,17 @@ database = config("DB_NAME", default=os.getenv("DB_NAME"))
 username = config("DB_USER", default=os.getenv("DB_USER"))
 password = config("DB_PASSWORD", default=os.getenv("DB_PASSWORD"))
 
+
+
 # Configuración básica de logging
 logging.basicConfig(
     level=logging.INFO,  # Cambia a DEBUG para ver mensajes más detallados
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format="\033[92m%(levelname)s\033[0m:     %(message)s"
 )
+
+
+# Inicializamos el cliente de SesameAPI
+sesame_client = SesameAPIClient()
 
 def etl_imputations(from_date: str, to_date: str):
     """Proceso ETL para imputaciones y fichajes
@@ -28,39 +37,50 @@ def etl_imputations(from_date: str, to_date: str):
     from_date : str
     to_date : str
     """
-    logging.info('Python HTTP trigger function processed a request for ETL imputations.')
+    logging.info(f'Iniciando proceso ETL imputaciones.')
 
     # Código ETL adaptado
     start_time = time.perf_counter()
 
     # ### Datos de empleados desde SESAME
-    employees_endpoint = "/sesame/employees-csv"
+    # Llamar al método que devuelve el CSV
+   
     employees_dataframes = []
     status = ["active", "inactive"]
     for stat in status:
         params = {
             "status": stat
         }
-        df = get_api_integration_csv(employees_endpoint, params)
+        csv_data = sesame_client.get_employees_csv()
+        if csv_data:
+            data = StringIO(csv_data)
+            df = pd.read_csv(data)
+        else:
+            logging.error(f"\033[91mERROR: \033[0mError en la carga de empleados.")
+            result = {
+                "status": "error",
+                "status-code": 400,
+                "message": "Error en la carga de los empleados."
+            }
+            return result
         employees_dataframes.append(df)
 
     df_employees = pd.concat(employees_dataframes, ignore_index=True)
+    
     logging.info("Datos de empleados cargados.")
 
     # ### Datos de horas teóricas desde SESAME
-    worked_hours_endpoint = "/sesame/worked-hours-csv"
-
     # Generar un rango de fechas
     date_range = pd.date_range(start=from_date, end=to_date)
 
     # Inicializar una lista para almacenar los DataFrames
     dataframes = []
 
+    logging.info("Inicia carga de datos de horas teóricas")
     # Iterar sobre cada día en el rango de fechas
     for i, single_date in enumerate(date_range):
         # Formatear la fecha al formato requerido por el endpoint
         day_str = single_date.strftime("%Y-%m-%d")
-        logging.info(f"Carga de datos horas teóricas - Progreso {(i + 1)/date_range.shape[0]*100:.2f}% - {day_str}")
 
         # Definir los parámetros para la solicitud de API
         params = {
@@ -71,7 +91,24 @@ def etl_imputations(from_date: str, to_date: str):
         # Llamar al endpoint y obtener el DataFrame para esa fecha
         if i % 20 == 0:
             time.sleep(30)
-        df_daily = get_api_integration_csv(worked_hours_endpoint, params)
+        csv_data = sesame_client.get_worked_hours_csv(
+            from_date=from_date,
+            to_date=to_date
+        )
+        if csv_data:
+            data = StringIO(csv_data)
+            df_daily = pd.read_csv(data)
+        else:
+            logging.error(f"\033[91mERROR: \033[0mError en la carga de las horas teóricas.")
+            result = {
+                "status": "error",
+                "status-code": 400,
+                "message": "Error en la carga de las horas teóricas."
+            }
+            return result
+
+        logging.info(f"Carga de datos horas teóricas - Progreso {(i + 1)/date_range.shape[0]*100:.2f}% - {day_str}")
+
         df_daily["date"] = day_str
 
         # Agregar el DataFrame a la lista si no está vacío
@@ -80,32 +117,61 @@ def etl_imputations(from_date: str, to_date: str):
 
     # Concatenar todos los DataFrames en uno solo
     df_worked_hours = pd.concat(dataframes, ignore_index=True)
-    logging.info("Datos de horas trabajadas cargados.")
+    logging.info("Datos de horas téoricas cargados.")
 
     # ### Datos de fichajes desde SESAME
-    work_entries_endpoint = "/sesame/work-entries-csv"
-    params = {
-        "from_date": from_date,
-        "to_date": to_date
-    }
-
-    df_work_entries = get_api_integration_csv(work_entries_endpoint, params)
+    csv_data = sesame_client.get_work_entries_csv(
+            from_date=from_date,
+            to_date=to_date
+        )
+    if csv_data:
+        data = StringIO(csv_data)
+        df_work_entries = pd.read_csv(data)
+    else:
+        logging.error(f"\033[91mERROR: \033[0mError en la carga de los fichajes.")
+        result = {
+            "status": "error",
+            "status-code": 400,
+            "message": "Error en la carga de los fichajes."
+        }
+        return result
     logging.info("Datos de fichajes cargados.")
 
     # ### Datos de imputaciones desde SESAME
-    time_entries_endpoint = "/sesame/time-entries-csv"
-    params = {
-        "from_date": from_date,
-        "to_date": to_date
-    }
-    df_time_entries = get_api_integration_csv(time_entries_endpoint, params)
+    csv_data = sesame_client.get_time_entries_csv(
+            from_date=from_date,
+            to_date=to_date
+        )
+    if csv_data:
+        data = StringIO(csv_data)
+        df_time_entries = pd.read_csv(data)
+    else:
+        logging.error(f"\033[91mERROR: \033[0mError en la carga de imputaciones.")
+        result = {
+            "status": "error",
+            "status-code": 400,
+            "message": "Error en la carga de los imputaciones."
+        }
+        return result
+
     logging.info("Datos de imputaciones cargados.")
 
     # ### Datos de Asignaciones de Departamento
-    department_assignations_endpoint = "/sesame/employee-department-assignations-csv"
-    df_department_assignations = get_api_integration_csv(department_assignations_endpoint)
+    csv_data = sesame_client.get_employee_department_assignations_csv()
+    if csv_data:
+        data = StringIO(csv_data)
+        df_department_assignations = pd.read_csv(data)
+    else:
+        logging.error(f"\033[91mERROR: \033[0mError en la carga de asignaciones de departamento.")
+        result = {
+            "status": "error",
+            "status-code": 400,
+            "message": "Error en la carga de asignaciones de departamento."
+        }
+        return result
+
     logging.info("Datos de asignaciones de departamento cargados.")
- 
+
     # ## Preparación de tablas de imputaciones
     logging.info("Inicia el procesamiento de los datos para tabla de imputaciones.")
     # Crear DataFrame para registros de imputaciones
@@ -191,12 +257,16 @@ def etl_imputations(from_date: str, to_date: str):
     # ### Cotejar imputaciones con id de empresa
     # Función para determinar si el nombre de la empresa está en la tabla de dimension de la BD
     # y si esta existe devolver su id
-    def get_company_id(field_name, serie, comparation_field, id_field):
+    def get_company_id(cliente, serie, nombre, empresa_id):
         for _, row in serie.iterrows():
-            if row[comparation_field].lower().rstrip() in field_name.lower().rstrip():
-                return row[id_field]
-            if "nou lloc" in field_name.lower().rstrip():
-                return "3"
+            try:
+                if row[nombre].lower().rstrip() in cliente.lower().rstrip():
+                    return row[empresa_id]
+                if "nou lloc" in nombre.lower().rstrip():
+                    return "3"
+            except:
+                print(cliente)
+                print(row[nombre])
         return None
 
     df_imputations["empresa_id"] = df_imputations["cliente"].apply(lambda x: get_company_id(x, df_company_id, "nombre", "empresa_id"))
