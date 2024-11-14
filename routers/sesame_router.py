@@ -481,6 +481,7 @@ async def get_employees_csv(
 
     return response
 
+
 @sesame_router.get("/employees/{employee_id}",
                    tags=["Sesame Employees"],
                    dependencies=[Depends(verify_secret_key)])

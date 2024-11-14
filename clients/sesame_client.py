@@ -33,27 +33,26 @@ all_api_keys = [plushabit_key, construhabit_key, greenpower_key, noulloc_key]
 
 
 class SesameAPIClient:
-    class SesameAPIClient:
-        """
-        Cliente para interactuar con la API de Sesame Time.
-        Proporciona varios métodos para hacer solicitudes a la API de Sesame
-        en diferentes secciones, como "Security", "Employees", "Statistics",
-        entre otros. Permite obtener información de empleados, fichajes, horas
-        trabajadas, y más.
+    """
+    Cliente para interactuar con la API de Sesame Time.
+    Proporciona varios métodos para hacer solicitudes a la API de Sesame
+    en diferentes secciones, como "Security", "Employees", "Statistics",
+    entre otros. Permite obtener información de empleados, fichajes, horas
+    trabajadas, y más.
 
-        Atributos
-        ----------
-        region : str
-            Región en la que se encuentra el servidor de la API
-            (por defecto 'eu1').
-        base_url : str
-            URL base de la API de Sesame Time.
-        api_key : str
-            Clave de API para autenticar las solicitudes.
-        headers : dict
-            Cabeceras para las solicitudes HTTP que incluyen la autorización
-            y tipo de contenido.
-        """
+    Atributos
+    ----------
+    region : str
+        Región en la que se encuentra el servidor de la API
+        (por defecto 'eu1').
+    base_url : str
+        URL base de la API de Sesame Time.
+    api_key : str
+        Clave de API para autenticar las solicitudes.
+    headers : dict
+        Cabeceras para las solicitudes HTTP que incluyen la autorización
+        y tipo de contenido.
+    """
 
     def __init__(self):
         self.region = "eu1"
