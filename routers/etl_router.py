@@ -44,8 +44,6 @@ async def run_etl_imputations(
     if from_date_parsed > to_date_parsed:
         raise HTTPException(status_code=400,
                             detail="from_date debe ser anterior a to_date")
-        
-    print("Inicia proceso ETL de imputaciones.")
 
     return etl_imputations(from_date_parsed, to_date_parsed)
 

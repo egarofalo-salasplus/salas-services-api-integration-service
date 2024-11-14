@@ -14,11 +14,21 @@ database = config("DB_NAME", default=os.getenv("DB_NAME"))
 username = config("DB_USER", default=os.getenv("DB_USER"))
 password = config("DB_PASSWORD", default=os.getenv("DB_PASSWORD"))
 
+# Configuración básica de logging
+logging.basicConfig(
+    level=logging.INFO,  # Cambia a DEBUG para ver mensajes más detallados
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 
 def etl_imputations(from_date: str, to_date: str):
-    print('Python HTTP trigger function processed a request for ETL imputations.')
+    """Proceso ETL para imputaciones y fichajes
 
-    print(database)
+    Parameters
+    ----------
+    from_date : str
+    to_date : str
+    """
+    logging.info('Python HTTP trigger function processed a request for ETL imputations.')
 
     # Código ETL adaptado
     start_time = time.perf_counter()
@@ -35,7 +45,7 @@ def etl_imputations(from_date: str, to_date: str):
         employees_dataframes.append(df)
 
     df_employees = pd.concat(employees_dataframes, ignore_index=True)
-    print("Datos de empleados cargados.")
+    logging.info("Datos de empleados cargados.")
 
     # ### Datos de horas teóricas desde SESAME
     worked_hours_endpoint = "/sesame/worked-hours-csv"
@@ -50,7 +60,7 @@ def etl_imputations(from_date: str, to_date: str):
     for i, single_date in enumerate(date_range):
         # Formatear la fecha al formato requerido por el endpoint
         day_str = single_date.strftime("%Y-%m-%d")
-        print(f"Carga de datos horas teóricas - Progreso {(i + 1)/date_range.shape[0]*100:.2f}% - {day_str}")
+        logging.info(f"Carga de datos horas teóricas - Progreso {(i + 1)/date_range.shape[0]*100:.2f}% - {day_str}")
 
         # Definir los parámetros para la solicitud de API
         params = {
@@ -70,7 +80,7 @@ def etl_imputations(from_date: str, to_date: str):
 
     # Concatenar todos los DataFrames en uno solo
     df_worked_hours = pd.concat(dataframes, ignore_index=True)
-    print("Datos de horas trabajadas cargados.")
+    logging.info("Datos de horas trabajadas cargados.")
 
     # ### Datos de fichajes desde SESAME
     work_entries_endpoint = "/sesame/work-entries-csv"
@@ -80,7 +90,7 @@ def etl_imputations(from_date: str, to_date: str):
     }
 
     df_work_entries = get_api_integration_csv(work_entries_endpoint, params)
-    print("Datos de fichajes cargados.")
+    logging.info("Datos de fichajes cargados.")
 
     # ### Datos de imputaciones desde SESAME
     time_entries_endpoint = "/sesame/time-entries-csv"
@@ -89,15 +99,15 @@ def etl_imputations(from_date: str, to_date: str):
         "to_date": to_date
     }
     df_time_entries = get_api_integration_csv(time_entries_endpoint, params)
-    print("Datos de imputaciones cargados.")
+    logging.info("Datos de imputaciones cargados.")
 
     # ### Datos de Asignaciones de Departamento
     department_assignations_endpoint = "/sesame/employee-department-assignations-csv"
     df_department_assignations = get_api_integration_csv(department_assignations_endpoint)
-    print("Datos de asignaciones de departamento cargados.")
+    logging.info("Datos de asignaciones de departamento cargados.")
  
     # ## Preparación de tablas de imputaciones
-    print("Inicia el procesamiento de los datos para tabla de imputaciones.")
+    logging.info("Inicia el procesamiento de los datos para tabla de imputaciones.")
     # Crear DataFrame para registros de imputaciones
     df_imputations = pd.DataFrame()
 
@@ -136,7 +146,7 @@ def etl_imputations(from_date: str, to_date: str):
     # Crear la conexión utilizando SQLAlchemy y pyodbc
     connection_string = f'mssql+pyodbc://{username}:{password}@{server}/{database}?driver=ODBC+Driver+17+for+SQL+Server'
     engine = create_engine(connection_string)
-    print("Conexión con base de datos SQL.")
+    logging.info("Conexión con base de datos SQL.")
 
     # #### Cargar la tabla Dim_Empleado
     # Consulta SQL para obtener todos los registros de la tabla 'Dim_Empleado'
@@ -238,9 +248,9 @@ def etl_imputations(from_date: str, to_date: str):
         if not inspect(engine).has_table(table_name, schema=schema):
             # Insertar los datos en la tabla SQL sin modificar la estructura de la tabla
             table_df.to_sql(table_name, con=connection, schema=schema, if_exists='append', index=False)
-            print("Datos introducidos con éxito.")
+            logging.info("Datos introducidos con éxito.")
         else:
-            print(f"La tabla {table_name} ya existe.")
+            logging.info(f"La tabla {table_name} ya existe.")
             # Leer la tabla existente
             df_table_existing = pd.read_sql(f'SELECT * FROM {table_complete_name}', connection)
 
@@ -250,12 +260,12 @@ def etl_imputations(from_date: str, to_date: str):
             # Insertar los registros nuevos
             if not df_table_new.empty:
                 df_table_new.to_sql(table_name, con=engine, schema=schema, index=False, if_exists='append')
-                print("Datos actualizados con éxito.")
+                logging.info("Datos actualizados con éxito.")
             else:
-                print(f"La tabla {table_name} está actualizada. No se agregó ningún registro")
+                logging.info(f"La tabla {table_name} está actualizada. No se agregó ningún registro")
 
     # ## Preparación de tabla Fichajes
-    print("Inicia el procesamiento de los datos para tabla de Fichajes.")
+    logging.info("Inicia el procesamiento de los datos para tabla de Fichajes.")
 
     # ### Copiar tabla de fichajes
     df_singing = df_worked_hours.groupby(["employeeId", "date"]).agg({
@@ -315,9 +325,9 @@ def etl_imputations(from_date: str, to_date: str):
         if not inspect(engine).has_table(table_name, schema=schema):
             # Insertar los datos en la tabla SQL sin modificar la estructura de la tabla
             table_df.to_sql(table_name, con=connection, schema=schema, if_exists='append', index=False)
-            print("Datos introducidos con éxito.")
+            logging.info("Datos introducidos con éxito.")
         else:
-            print(f"La tabla {table_name} ya existe.")
+            logging.info(f"La tabla {table_name} ya existe.")
             # Leer la tabla existente
             df_table_existing = pd.read_sql(f'SELECT * FROM {table_complete_name}', connection)
 
@@ -327,9 +337,9 @@ def etl_imputations(from_date: str, to_date: str):
             # Insertar los registros nuevos
             if not df_table_new.empty:
                 df_table_new.to_sql(table_name, con=engine, schema=schema, index=False, if_exists='append')
-                print("Datos actualizados con éxito.")
+                logging.info("Datos actualizados con éxito.")
             else:
-                print(f"La tabla {table_name} está actualizada. No se agregó ningún registro")
+                logging.info(f"La tabla {table_name} está actualizada. No se agregó ningún registro")
 
     end_time = time.perf_counter()
 
@@ -338,7 +348,7 @@ def etl_imputations(from_date: str, to_date: str):
     minutes = int(elapsed_time // 60)
     seconds = elapsed_time % 60
 
-    print(f"Tiempo de ejecución de pipeline: {minutes} minutos y {seconds:.0f} segundos.")
+    logging.info(f"Tiempo de ejecución de pipeline: {minutes} minutos y {seconds:.0f} segundos.")
 
     result = {
         "status": "success",
