@@ -48,10 +48,7 @@ def etl_imputations(from_date: str, to_date: str):
     employees_dataframes = []
     status = ["active", "inactive"]
     for stat in status:
-        params = {
-            "status": stat
-        }
-        csv_data = sesame_client.get_employees_csv()
+        csv_data = sesame_client.get_employees_csv(status=stat)
         if csv_data:
             data = StringIO(csv_data)
             df = pd.read_csv(data)
@@ -68,6 +65,7 @@ def etl_imputations(from_date: str, to_date: str):
     df_employees = pd.concat(employees_dataframes, ignore_index=True)
     
     logging.info("Datos de empleados cargados.")
+    logging.info(f"Dimensiones: {df_employees.shape}")
 
     # ### Datos de horas teóricas desde SESAME
     # Generar un rango de fechas
@@ -82,18 +80,12 @@ def etl_imputations(from_date: str, to_date: str):
         # Formatear la fecha al formato requerido por el endpoint
         day_str = single_date.strftime("%Y-%m-%d")
 
-        # Definir los parámetros para la solicitud de API
-        params = {
-            "from_date": day_str,
-            "to_date": day_str
-        }
-
         # Llamar al endpoint y obtener el DataFrame para esa fecha
         if i % 20 == 0:
             time.sleep(30)
         csv_data = sesame_client.get_worked_hours_csv(
-            from_date=from_date,
-            to_date=to_date
+            from_date=day_str,
+            to_date=day_str
         )
         if csv_data:
             data = StringIO(csv_data)
@@ -118,6 +110,7 @@ def etl_imputations(from_date: str, to_date: str):
     # Concatenar todos los DataFrames en uno solo
     df_worked_hours = pd.concat(dataframes, ignore_index=True)
     logging.info("Datos de horas téoricas cargados.")
+    logging.info(f"Dimensiones: {df_worked_hours.shape}")
 
     # ### Datos de fichajes desde SESAME
     csv_data = sesame_client.get_work_entries_csv(
@@ -136,6 +129,7 @@ def etl_imputations(from_date: str, to_date: str):
         }
         return result
     logging.info("Datos de fichajes cargados.")
+    logging.info(f"Dimensiones: {df_work_entries.shape}")
 
     # ### Datos de imputaciones desde SESAME
     csv_data = sesame_client.get_time_entries_csv(
@@ -145,6 +139,7 @@ def etl_imputations(from_date: str, to_date: str):
     if csv_data:
         data = StringIO(csv_data)
         df_time_entries = pd.read_csv(data)
+        
     else:
         logging.error(f"\033[91mERROR: \033[0mError en la carga de imputaciones.")
         result = {
@@ -155,6 +150,7 @@ def etl_imputations(from_date: str, to_date: str):
         return result
 
     logging.info("Datos de imputaciones cargados.")
+    logging.info(f"Dimensiones: {df_time_entries.shape}")
 
     # ### Datos de Asignaciones de Departamento
     csv_data = sesame_client.get_employee_department_assignations_csv()
@@ -171,6 +167,7 @@ def etl_imputations(from_date: str, to_date: str):
         return result
 
     logging.info("Datos de asignaciones de departamento cargados.")
+    logging.info(f"Dimensiones: {df_department_assignations.shape}")
 
     # ## Preparación de tablas de imputaciones
     logging.info("Inicia el procesamiento de los datos para tabla de imputaciones.")
@@ -178,7 +175,7 @@ def etl_imputations(from_date: str, to_date: str):
     df_imputations = pd.DataFrame()
 
     # ### Convertir de String a Fecha
-    df_imputations["fecha"] = pd.to_datetime(df_time_entries["time_entry_in_datetime"]).dt.date
+    df_imputations["fecha"] = pd.to_datetime(df_time_entries["time_entry_in_datetime"], utc=True).dt.date
 
     # ### Tarea
     df_imputations["tarea"] = df_time_entries["comment"]
@@ -203,8 +200,8 @@ def etl_imputations(from_date: str, to_date: str):
     df_imputations = df_imputations.drop(["id", "price_per_hour"], axis=1)
 
     # ### Horas imputadas
-    df_imputations["time_entry_in_datetime"] = pd.to_datetime(df_time_entries["time_entry_in_datetime"])
-    df_imputations["time_entry_out_datetime"] = pd.to_datetime(df_time_entries["time_entry_out_datetime"])
+    df_imputations["time_entry_in_datetime"] = pd.to_datetime(df_time_entries["time_entry_in_datetime"], utc=True)
+    df_imputations["time_entry_out_datetime"] = pd.to_datetime(df_time_entries["time_entry_out_datetime"], utc=True)
     df_imputations["horas_imputadas"] = (df_imputations["time_entry_out_datetime"] - df_imputations["time_entry_in_datetime"]).dt.total_seconds() / 3600
     df_imputations = df_imputations.drop(["time_entry_in_datetime", "time_entry_out_datetime"], axis=1)
 
@@ -272,8 +269,8 @@ def etl_imputations(from_date: str, to_date: str):
     df_imputations["empresa_id"] = df_imputations["cliente"].apply(lambda x: get_company_id(x, df_company_id, "nombre", "empresa_id"))
 
     # ### Cotejar imputaciones con id de departamento
-    df_department_assignations["created_at"] = pd.to_datetime(df_department_assignations["created_at"])
-    df_department_assignations["updated_at"] = pd.to_datetime(df_department_assignations["updated_at"])
+    df_department_assignations["created_at"] = pd.to_datetime(df_department_assignations["created_at"], utc=True)
+    df_department_assignations["updated_at"] = pd.to_datetime(df_department_assignations["updated_at"], utc=True)
     index_of_last_update = df_department_assignations.groupby(["employee_id"])["updated_at"].idxmax()
     df_department_last_update = df_department_assignations.loc[index_of_last_update]
 
@@ -311,7 +308,7 @@ def etl_imputations(from_date: str, to_date: str):
     schema = "dbo"
     table_name = "Fact_Imputaciones"
     table_complete_name = schema + "." + table_name
-    table_df = df_imputations_summary.copy()
+    table_df = df_imputations_summary.copy().dropna()
 
     with engine.connect() as connection:
         # Crear la tabla si no existe
@@ -388,7 +385,7 @@ def etl_imputations(from_date: str, to_date: str):
     schema = "dbo"
     table_name = "Fact_Fichajes"
     table_complete_name = schema + "." + table_name
-    table_df = df_singing.copy()
+    table_df = df_singing.copy().dropna()
 
     with engine.connect() as connection:
         # Crear la tabla si no existe

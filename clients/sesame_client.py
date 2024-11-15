@@ -8,6 +8,7 @@ empleados, horas trabajadas y fichajes, haciendo solicitudes a los
 diferentes endpoints de la API.
 """
 import requests
+import logging
 from decouple import config
 import pandas as pd
 import io
@@ -593,16 +594,19 @@ class SesameAPIClient:
             flat_records = []
             for record in records:
                 # Datos a extraer
-                flat_record = {
-                    'id': record.get('id'),
-                    'employee_id': record.get('employee')["id"],
-                    'work_entry_type': record.get('workEntryType'),
-                    'worked_seconds': record.get('workedSeconds'),
-                    'work_entry_in_datetime': record.get('workEntryIn')['date'],
-                    'work_entry_out_datetime': record.get('workEntryOut')['date'],
-                    'work_break_id': record.get('workBreakId'),
-                }
-                flat_records.append(flat_record)
+                try:
+                    flat_record = {
+                        'id': record.get('id'),
+                        'employee_id': record.get('employee')["id"],
+                        'work_entry_type': record.get('workEntryType'),
+                        'worked_seconds': record.get('workedSeconds'),
+                        'work_entry_in_datetime': record.get('workEntryIn')['date'],
+                        'work_entry_out_datetime': record.get('workEntryOut')['date'],
+                        'work_break_id': record.get('workBreakId'),
+                    }
+                    flat_records.append(flat_record)
+                except TypeError:
+                    logging.error(f"\033[91mERROR\033[0m:     Registro -> {record}")
 
             df = pd.DataFrame(flat_records)
 
