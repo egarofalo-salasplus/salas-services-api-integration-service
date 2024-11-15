@@ -606,7 +606,7 @@ class SesameAPIClient:
                     }
                     flat_records.append(flat_record)
                 except TypeError:
-                    logging.error(f"\033[91mERROR\033[0m:     Registro -> {record}")
+                    logging.error(f"TYPE ERROR:     Registro -> {record}")
 
             df = pd.DataFrame(flat_records)
 

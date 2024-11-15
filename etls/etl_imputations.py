@@ -22,7 +22,7 @@ password = config("DB_PASSWORD", default=os.getenv("DB_PASSWORD"))
 # Configuración básica de logging
 logging.basicConfig(
     level=logging.INFO,  # Cambia a DEBUG para ver mensajes más detallados
-    format="\033[92m%(levelname)s\033[0m:     %(message)s"
+    format="%(levelname)s:     %(message)s"
 )
 
 
@@ -53,7 +53,7 @@ def etl_imputations(from_date: str, to_date: str):
             data = StringIO(csv_data)
             df = pd.read_csv(data)
         else:
-            logging.error(f"\033[91mERROR: \033[0mError en la carga de empleados.")
+            logging.error(f"ERROR: Error en la carga de empleados.")
             result = {
                 "status": "error",
                 "status-code": 400,
@@ -91,7 +91,7 @@ def etl_imputations(from_date: str, to_date: str):
             data = StringIO(csv_data)
             df_daily = pd.read_csv(data)
         else:
-            logging.error(f"\033[91mERROR: \033[0mError en la carga de las horas teóricas.")
+            logging.error(f"ERROR: Error en la carga de las horas teóricas.")
             result = {
                 "status": "error",
                 "status-code": 400,
@@ -121,7 +121,7 @@ def etl_imputations(from_date: str, to_date: str):
         data = StringIO(csv_data)
         df_work_entries = pd.read_csv(data)
     else:
-        logging.error(f"\033[91mERROR: \033[0mError en la carga de los fichajes.")
+        logging.error(f"ERROR: Error en la carga de los fichajes.")
         result = {
             "status": "error",
             "status-code": 400,
@@ -141,7 +141,7 @@ def etl_imputations(from_date: str, to_date: str):
         df_time_entries = pd.read_csv(data)
         
     else:
-        logging.error(f"\033[91mERROR: \033[0mError en la carga de imputaciones.")
+        logging.error(f"ERROR: Error en la carga de imputaciones.")
         result = {
             "status": "error",
             "status-code": 400,
@@ -158,7 +158,7 @@ def etl_imputations(from_date: str, to_date: str):
         data = StringIO(csv_data)
         df_department_assignations = pd.read_csv(data)
     else:
-        logging.error(f"\033[91mERROR: \033[0mError en la carga de asignaciones de departamento.")
+        logging.error(f"ERROR: Error en la carga de asignaciones de departamento.")
         result = {
             "status": "error",
             "status-code": 400,
