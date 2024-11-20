@@ -291,24 +291,24 @@ def etl_imputations(from_date: str, to_date: str):
     df_imputations = df_imputations.fillna({"tarea": "", "etiqueta": "No especificada"})
 
     # ### Resumir datos por empleado, fecha y tarea
-    df_imputations_summary = df_imputations.groupby(["empleado_id", "fecha", "tarea"]).agg({
-        "cliente": "first",
-        "proyecto": "first",
-        "etiqueta": "first",
-        "precio_hora": "first",
-        "horas_imputadas": "sum",
-        "empresa_id": "first",
-        "departamento_id": "first"
-    }).reset_index()
+    # df_imputations_summary = df_imputations.groupby(["empleado_id", "fecha","proyecto", "tarea"]).agg({
+    #     "cliente": "first",
+    #     "proyecto": "first",
+    #     "etiqueta": "first",
+    #     "precio_hora": "first",
+    #     "horas_imputadas": "sum",
+    #     "empresa_id": "first",
+    #     "departamento_id": "first"
+    # }).reset_index()
 
-    df_imputations_summary = df_imputations_summary[["fecha", "tarea", "cliente", "proyecto", "etiqueta", "precio_hora", "horas_imputadas", "empresa_id", "departamento_id", "empleado_id"]]
+    # df_imputations_summary = df_imputations_summary[["fecha", "tarea", "cliente", "proyecto", "etiqueta", "precio_hora", "horas_imputadas", "empresa_id", "departamento_id", "empleado_id"]]
 
     # ## Actualizar tabla de Imputaciones en Base de Datos
     # Nombre de la tabla en la base de datos
     schema = "dbo"
     table_name = "Fact_Imputaciones"
     table_complete_name = schema + "." + table_name
-    table_df = df_imputations_summary.copy().dropna()
+    table_df = df_imputations.copy().dropna()
 
     with engine.connect() as connection:
         # Crear la tabla si no existe

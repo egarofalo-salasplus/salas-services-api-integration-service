@@ -281,6 +281,10 @@ class SesameAPIClient:
         except requests.exceptions.RequestException as e:
             print(f"Error en la solicitud: {e}")
             return ""
+        except TypeError as terror:
+            print(f"Error de tipo: {str(terror)}")
+            print(f"RECORD: {record}")
+            return ""
 
     def get_employee_by_id(self, employee_id):
         """
@@ -619,6 +623,10 @@ class SesameAPIClient:
         except requests.exceptions.RequestException as e:
             print(f"Error en la solicitud: {e}")
             return ""
+        except TypeError as terror:
+            print(f"Error de tipo: {str(terror)}")
+            print(f"RECORD: {record}")
+            return ""
 
     def get_time_entries(self, employee_id=None, from_date=None, to_date=None,
                          employee_status=None, limit=None, page=None):
@@ -786,8 +794,12 @@ class SesameAPIClient:
             return output.getvalue()
 
         except requests.exceptions.RequestException as e:
-            print(f"Error en la solicitud: {e}")
+            print(f"Error en la solicitud: {str(e)}")
             # Retorna un DataFrame vacío en caso de error
+            return ""
+        except TypeError as terror:
+            print(f"Error de tipo: {str(terror)}")
+            print(f"RECORD: {record}")
             return ""
 
     def get_employee_department_assignations(self, employee_id=None,
@@ -933,6 +945,10 @@ class SesameAPIClient:
         except requests.exceptions.RequestException as e:
             print(f"Error en la solicitud: {e}")
             # Retorna un DataFrame vacío en caso de error
+            return ""
+        except TypeError as terror:
+            print(f"Error de tipo: {str(terror)}")
+            print(f"RECORD: {record}")
             return ""
 
 
