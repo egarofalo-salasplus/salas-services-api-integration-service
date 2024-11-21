@@ -4,16 +4,28 @@ from datetime import datetime
 import logging
 from fastapi import APIRouter, Depends, Query, HTTPException
 from auth.oauth import verify_secret_key
-from etls.etl_imputations import etl_imputations
-
+from etls.etl_imputations import etl_imputations, get_task_status, update_task_status, tasks_status
+from pydantic import BaseModel
+from typing import Dict
+import asyncio
+import uuid
 
 # Router para ETL
 etl_router = APIRouter()
 
 
+# Modelo de respuesta para el inicio del ETL
+class TaskResponse(BaseModel):
+    task_id: str
+    status: str
+    message: str
+
+
 @etl_router.get("/run-etl-imputations",
                 tags=["ETL Process"],
-                dependencies=[Depends(verify_secret_key)])
+                response_model=TaskResponse,
+                status_code=201,
+                dependencies=[Depends(verify_secret_key)],)
 async def run_etl_imputations(
     from_date: str = Query(...,
                            description="Fecha de inicio en formato YYYY-MM-DD"),
@@ -36,6 +48,9 @@ async def run_etl_imputations(
     _type_
         _description_
     """
+    # Genera un identificador único para la tarea
+    task_id = str(uuid.uuid4())
+
     # Validación del formato de las fechas
     from_date_parsed = validate_date_format(from_date)
     to_date_parsed = validate_date_format(to_date)
@@ -45,7 +60,37 @@ async def run_etl_imputations(
         raise HTTPException(status_code=400,
                             detail="from_date debe ser anterior a to_date")
 
-    return etl_imputations(from_date_parsed, to_date_parsed)
+    # Almacena el estado inicial de la tarea
+    await update_task_status(task_id, "in_progress", "ETL process is running")
+
+    # Lanza la función ETL en segundo plano
+    asyncio.create_task(etl_imputations(task_id, from_date, to_date))
+
+    # Devuelve el identificador y el estado inicial
+    return TaskResponse(
+        task_id=task_id,
+        status="in_progress",
+        message="The ETL process has been initiated. Use the task_id to check the status.",
+    )
+
+
+# Endpoint para verificar el estado del ETL
+@etl_router.get(
+    "/run-etl-imputations/status/{task_id}",
+    tags=["ETL Process"],
+    response_model=TaskResponse,
+    dependencies=[Depends(verify_secret_key)],
+)
+async def get_etl_imputations_status(task_id: str):
+    """Verificar estado de tarea etl_imputaciones"""
+    # Obtiene el estado actual de la tarea
+    task_info = await get_task_status(task_id)
+
+    return TaskResponse(
+        task_id=task_id,
+        status=task_info["status"],
+        message=task_info["message"],
+    )
 
 
 def validate_date_format(date_str: str):

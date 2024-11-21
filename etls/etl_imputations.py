@@ -3,11 +3,33 @@ from io import StringIO
 import logging
 import time
 import pandas as pd
+from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy import create_engine, inspect
 from decouple import config
 from shared.utils import get_api_integration_csv
 from clients.sesame_client import SesameAPIClient
+import asyncio
+from typing import Dict
+
+# Usa un diccionario seguro con bloqueo
+tasks_status_lock = asyncio.Lock()
+tasks_status: Dict[str, Dict] = {}
+
+async def update_task_status(task_id: str, status: str, message: str):
+    """Actualiza el estado de una tarea con un bloqueo."""
+    logging.info(f"Updating task {task_id} to status {status} with message '{message}'")
+    tasks_status[task_id] = {
+        "status": status,
+        "message": message,
+    }
+
+async def get_task_status(task_id: str):
+    """Obtiene el estado de una tarea con un bloqueo."""
+    logging.info(f"Getting task {task_id}")
+    if task_id not in tasks_status:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return tasks_status[task_id]
 
 
 # Secret keys para las diversas empresas
@@ -29,7 +51,7 @@ logging.basicConfig(
 # Inicializamos el cliente de SesameAPI
 sesame_client = SesameAPIClient()
 
-def etl_imputations(from_date: str, to_date: str):
+async def etl_imputations(task_id: str, from_date: str, to_date: str):
     """Proceso ETL para imputaciones y fichajes
 
     Parameters
@@ -63,6 +85,10 @@ def etl_imputations(from_date: str, to_date: str):
         employees_dataframes.append(df)
 
     df_employees = pd.concat(employees_dataframes, ignore_index=True)
+    
+    # Almacena el estado de la tarea
+    await update_task_status(task_id, "in_progress", "Empleados cargados")
+    await asyncio.sleep(1)
     
     logging.info("Datos de empleados cargados.")
     logging.info(f"Dimensiones: {df_employees.shape}")
@@ -101,6 +127,10 @@ def etl_imputations(from_date: str, to_date: str):
 
         logging.info(f"Carga de datos horas teóricas - Progreso {(i + 1)/date_range.shape[0]*100:.2f}% - {day_str}")
 
+        # Almacena el estado de la tarea
+        await update_task_status(task_id, "in_progress", "Cargando horas teóricas")
+        await asyncio.sleep(1)
+
         df_daily["date"] = day_str
 
         # Agregar el DataFrame a la lista si no está vacío
@@ -111,6 +141,9 @@ def etl_imputations(from_date: str, to_date: str):
     df_worked_hours = pd.concat(dataframes, ignore_index=True)
     logging.info("Datos de horas téoricas cargados.")
     logging.info(f"Dimensiones: {df_worked_hours.shape}")
+    # Almacena el estado de la tarea
+    await update_task_status(task_id, "in_progress", "Horas teóricas cargadas")
+    await asyncio.sleep(1)
 
     # ### Datos de fichajes desde SESAME
     csv_data = sesame_client.get_work_entries_csv(
@@ -130,6 +163,10 @@ def etl_imputations(from_date: str, to_date: str):
         return result
     logging.info("Datos de fichajes cargados.")
     logging.info(f"Dimensiones: {df_work_entries.shape}")
+    
+    # Almacena el estado de la tarea
+    await update_task_status(task_id, "in_progress", "Fichajes cargados")
+    await asyncio.sleep(1)
 
     # ### Datos de imputaciones desde SESAME
     csv_data = sesame_client.get_time_entries_csv(
@@ -151,6 +188,9 @@ def etl_imputations(from_date: str, to_date: str):
 
     logging.info("Datos de imputaciones cargados.")
     logging.info(f"Dimensiones: {df_time_entries.shape}")
+    # Almacena el estado de la tarea
+    await update_task_status(task_id, "in_progress", "Imputaciones cargadas")
+    await asyncio.sleep(1)
 
     # ### Datos de Asignaciones de Departamento
     csv_data = sesame_client.get_employee_department_assignations_csv()
@@ -168,6 +208,9 @@ def etl_imputations(from_date: str, to_date: str):
 
     logging.info("Datos de asignaciones de departamento cargados.")
     logging.info(f"Dimensiones: {df_department_assignations.shape}")
+    # Almacena el estado de la tarea
+    await update_task_status(task_id, "in_progress", "Asignaciones  cargadas")
+    await asyncio.sleep(1)
 
     # ## Preparación de tablas de imputaciones
     logging.info("Inicia el procesamiento de los datos para tabla de imputaciones.")
@@ -207,6 +250,11 @@ def etl_imputations(from_date: str, to_date: str):
 
     # ### Conexión con Base de datos
     # Crear la conexión utilizando SQLAlchemy y pyodbc
+    
+    # Almacena el estado de la tarea
+    await update_task_status(task_id, "in_progress", "Conectando con base de datos")
+    await asyncio.sleep(1)
+    
     connection_string = f'mssql+pyodbc://{username}:{password}@{server}/{database}?driver=ODBC+Driver+17+for+SQL+Server'
     engine = create_engine(connection_string)
     logging.info("Conexión con base de datos SQL.")
@@ -290,19 +338,6 @@ def etl_imputations(from_date: str, to_date: str):
     # ### Tratar valores nulos
     df_imputations = df_imputations.fillna({"tarea": "", "etiqueta": "No especificada"})
 
-    # ### Resumir datos por empleado, fecha y tarea
-    # df_imputations_summary = df_imputations.groupby(["empleado_id", "fecha","proyecto", "tarea"]).agg({
-    #     "cliente": "first",
-    #     "proyecto": "first",
-    #     "etiqueta": "first",
-    #     "precio_hora": "first",
-    #     "horas_imputadas": "sum",
-    #     "empresa_id": "first",
-    #     "departamento_id": "first"
-    # }).reset_index()
-
-    # df_imputations_summary = df_imputations_summary[["fecha", "tarea", "cliente", "proyecto", "etiqueta", "precio_hora", "horas_imputadas", "empresa_id", "departamento_id", "empleado_id"]]
-
     # ## Actualizar tabla de Imputaciones en Base de Datos
     # Nombre de la tabla en la base de datos
     schema = "dbo"
@@ -330,6 +365,10 @@ def etl_imputations(from_date: str, to_date: str):
                 logging.info("Datos actualizados con éxito.")
             else:
                 logging.info(f"La tabla {table_name} está actualizada. No se agregó ningún registro")
+
+    # Almacena el estado de la tarea
+    await update_task_status(task_id, "in_progress", "Tabla Fact_Imputaciones actualizada")
+    await asyncio.sleep(1)
 
     # ## Preparación de tabla Fichajes
     logging.info("Inicia el procesamiento de los datos para tabla de Fichajes.")
@@ -409,6 +448,10 @@ def etl_imputations(from_date: str, to_date: str):
                 logging.info(f"La tabla {table_name} está actualizada. No se agregó ningún registro")
 
     end_time = time.perf_counter()
+    
+    # Almacena el estado de la tarea
+    await update_task_status(task_id, "in_progress", "Tabla Fact_Fichajes actualizada")
+    await asyncio.sleep(1)
 
     # Calcular el tiempo transcurrido
     elapsed_time = end_time - start_time
@@ -421,6 +464,12 @@ def etl_imputations(from_date: str, to_date: str):
         "status": "success",
         "status-code": 200,
         "message": "ETL de imputaciones y fichajes ejecutado con éxito."
+    }
+
+    # Actualiza el estado de la tarea al finalizar
+    tasks_status[task_id] = {
+        "status": "completed",
+        "message": "ETL process completed successfully",
     }
 
     return result
