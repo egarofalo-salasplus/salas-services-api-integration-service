@@ -26,6 +26,46 @@ class TestSesameAPIClient(unittest.TestCase):
         response = self.client.get_employees(email=self.mail)
         self.assertEqual(response.status_code, 200)
 
+    def test_post_employees(self):
+        kargs = {
+                    "companyId": "ea3fc05a-a4b1-4a5d-a293-b42b96347f1b",
+                    "firstName": "TestOscar",
+                    "lastName": "TestVal",
+                    "invitation": True,
+                    "status": "active",
+                    "gender": "male",
+                    "email": "otest@salas.plus",
+                    "contractId": None,
+                    "code": 0,
+                    "pin": 0,
+                    "nid": "123456789A",
+                    "identityNumberType": "dni",
+                    "ssn": "string",
+                    "phone": "617119198",
+                    "dateOfBirth": "1994-05-31",
+                    "nationality": "Española",
+                    "maritalStatus": "Casado",
+                    "address": "Calle de prueba",
+                    "postalCode": "08205",
+                    "emergencyPhone": "626232788",
+                    "childrenCount": 0,
+                    "disability": 0,
+                    "personalEmail": "otest@gmail.com",
+                    "description": None,
+                    "city": "Sabadell",
+                    "province": "Barcelona",
+                    "country": "España",
+                    "salaryRange": None,
+                    "studyLevel": None,
+                    "professionalCategoryCode": None,
+                    "professionalCategoryDescription": None,
+                    "bic": None,
+                    "jobChargeId": None
+                    }
+        
+        response = self.client.post_employees(**kargs)
+        self.assertEqual(response.status_code, 200)
+
     def test_get_employees_csv(self):
         response = self.client.get_employees_csv()
         self.assertNotEqual(response, "")

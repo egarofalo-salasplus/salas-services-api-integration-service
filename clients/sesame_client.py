@@ -130,6 +130,124 @@ class SesameAPIClient:
         response = call_api_with_backoff(url, self.headers, params)
         return response
 
+    def post_employees(self,
+                        companyId,
+                        firstName,
+                        lastName,
+                        email,
+                        nid,
+                        invitation=None,
+                        status=None,
+                        gender=None,
+                        contractId=None,
+                        code=None,
+                        pin=None,
+                        identityNumberType=None,
+                        ssn=None,
+                        phone=None,
+                        dateOfBirth=None,
+                        nationality=None,
+                        maritalStatus=None,
+                        address=None,
+                        postalCode=None,
+                        emergencyPhone=None,
+                        childrenCount=None,
+                        disability=None,
+                        personalEmail=None,
+                        description=None,
+                        city=None,
+                        province=None,
+                        country=None,
+                        salaryRange=None,
+                        studyLevel=None,
+                        professionalCategoryCode=None,
+                        professionalCategoryDescription=None,
+                        bic=None,
+                        jobChargeId=None):
+
+        """
+        Crear un nuevo empleado en el sistema.
+
+        Parámetros
+        ----------
+        Parámetros obligatorios:
+            - companyId (str): ID de la empresa que se esté usando en SESAME.
+            - firstName (str): Nombre del empleado.
+            - lastName (str): Apellido del empleado.
+            - email (str): Correo electrónico del empleado.
+            - nid (str): DNI del empleado.
+
+        Parámetros opcionales:
+            - invitation (bool): Indica si se debe enviar una invitación.
+            - status (str): Estado inicial del empleado (por defecto "activo").
+            - gender (str): Género del empleado.
+            - contract_id (str): ID del contrato.
+            - ... (y muchos otros).
+        
+        Retorna
+        -------
+        dict
+            Respuesta de la API tras realizar la solicitud.
+        """
+
+        #Validar campos obligatorios
+        required_fields = {"companyId": companyId, 
+                           "firstName": firstName,
+                           "lastName": lastName, 
+                           "email": email, 
+                           "nid": nid
+        }
+
+        missing_fields = [field for field, value in required_fields.items() if not value]
+        if missing_fields:
+            raise ValueError(f"Faltan campos obligatorios: {', '.join(missing_fields)}")
+
+        #Construir el mensaje del cuerpo
+        body = {
+                "companyId": companyId,
+                "firstName": firstName,
+                "lastName": lastName,
+                "invitation": invitation,
+                "status": status,
+                "gender": gender,
+                "email": email,
+                "contractId": contractId,
+                "code": code,
+                "pin": pin,
+                "nid": nid,
+                "identityNumberType": identityNumberType,
+                "ssn": ssn,
+                "phone": phone,
+                "dateOfBirth": dateOfBirth,
+                "nationality": nationality,
+                "maritalStatus": maritalStatus,
+                "address": address,
+                "postalCode": postalCode,
+                "emergencyPhone": emergencyPhone,
+                "childrenCount": childrenCount,
+                "disability": disability,
+                "personalEmail": personalEmail,
+                "description": description,
+                "city": city,
+                "province": province,
+                "country": country,
+                "salaryRange": salaryRange,
+                "studyLevel": studyLevel,
+                "professionalCategoryCode": professionalCategoryCode,
+                "professionalCategoryDescription": professionalCategoryDescription,
+                "bic": bic,
+                "jobChargeId": jobChargeId
+        }
+
+        # Limpiar claves con valores nulos
+        body = {k: v for k, v in body.items() if v is not None}
+
+        url = f"{self.base_url}/core/v3/employees"
+        
+        # Llamar a la API con el cuerpo de la solicitud
+        response = requests.post(url, json=body, headers=self.headers)
+        return response
+        
     def get_employees_csv(self, code=None, dni=None, email=None,
                           department_ids=None, office_ids=None, limit=None,
                           page=None, order_by=None, status=None):
@@ -952,11 +1070,14 @@ class SesameAPIClient:
             return ""
 
 
-def call_api_with_backoff(endpoint, headers, params, max_retries=30):
+def call_api_with_backoff(endpoint, headers, params=None, max_retries=30, method="GET", body=None):
     retries = 0
     while retries < max_retries:
-        response = requests.get(endpoint, headers=headers, params=params,
-                                timeout=5000)
+        if method == "GET":
+            response = requests.get(endpoint, headers=headers, params=params,
+                                    timeout=5000)
+        if method == "POST":
+            response = requests.post(url=endpoint, json=body, headers=headers)
         # si hay contenido en la respuesta
         if response.status_code == 200 and response.text:
             return response
