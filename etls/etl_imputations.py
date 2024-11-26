@@ -478,5 +478,3 @@ async def etl_imputations(task_id: str, from_date: str, to_date: str):
         # Almacena el estado de la tarea
         await update_task_status(task_id, "error", "Error en proceso ETL de imputaciones")
         await asyncio.sleep(1)
-        
-    
