@@ -26,6 +26,10 @@ class TestSesameAPIClient(unittest.TestCase):
         response = self.client.get_employees(email=self.mail)
         self.assertEqual(response.status_code, 200)
 
+    def test_get_employees_csv(self):
+        response = self.client.get_employees_csv()
+        self.assertNotEqual(response, "")       
+
     def test_post_employees(self):
         kargs = {
                     "companyId": "ea3fc05a-a4b1-4a5d-a293-b42b96347f1b",
@@ -65,10 +69,6 @@ class TestSesameAPIClient(unittest.TestCase):
         
         response = self.client.post_employees(**kargs)
         self.assertEqual(response.status_code, 200)
-
-    def test_get_employees_csv(self):
-        response = self.client.get_employees_csv()
-        self.assertNotEqual(response, "")
 
     def test_get_employee_by_id(self):
         response = self.client.get_employee_by_id(self.employee_id)
