@@ -23,7 +23,7 @@ project-root/
 ├── routers/
 │   ├── __init__.py
 │   └── sesamen_router.py  # API para exponer los métodos de Sesame
-├── main.py  # Punto de entrada del servicio 
+├── main.py  # Punto de entrada del servicio
 ├── tests/
 │   ├── __init__.py
 │   ├── test_sesame_client.py  # Pruebas unitarias para el cliente de Sesame
