@@ -246,7 +246,7 @@ class MondayAPIClient:
                                 assignment = column["value"].split('\"')[3]
                 except ValueError as e:
                     print(f"¡Error! {e}. Es posible que algún campo no contenga ningún valor.")
-                task_asigments[list(items.keys())[i]] = {"name": list(items.values())[i], "hours": hours, "assigment": assignment}
+                task_asigments[list(items.keys())[i]] = {"name": list(items.values())[i], "hours": hours, "assignment": assignment}
             return task_asigments
         except ValueError as e:
             print(f"Error de valor: {e}")
