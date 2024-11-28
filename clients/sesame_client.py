@@ -76,8 +76,12 @@ class SesameAPIClient:
             La respuesta en formato JSON de la información de la cuenta
         """
         url = f"{self.base_url}/core/v3/info"
-        response = call_api_with_backoff(url, self.headers, params=None)
-        return response
+        try:
+            response = call_api_with_backoff(url, self.headers, params=None)
+            return response
+        except Exception as e:
+            print(f"Error: {e}")
+            return e
 
     # Métodos para la sección "Employees"
     def get_employees(self, code=None, dni=None, email=None,

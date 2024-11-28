@@ -254,3 +254,56 @@ class MondayAPIClient:
         except requests.exceptions.HTTPError as e:
             print(f"Error en solicitud: {e}")
             return None
+
+    def set_column_value(self, board_id: str, item_id: str, column_id: str,
+                         value: str):
+        """
+        Modificar el valor de una columna dado el id del tablero, 
+        el id del item, el id de la columna y el nuevo valor.
+
+        Parameters
+        ----------
+        board_id : str
+            Identificador del tablero
+        item_id : str
+            Identificador del objeto (sea item o subitem)
+        column_id : str
+            Identificador de campo
+        value : str
+            Valor a editar (se agregará al valor existente)
+
+        Returns
+        -------
+        bool
+            Verdadero si la operación es exitosa y falso en caso contrario
+        """
+
+        # Cuerpo de la consulta GraphQL
+        query = f"""
+        mutation {{
+        change_simple_column_value(item_id: "{item_id}", board_id: "{board_id}", column_id: "{column_id}", value: "{value}") {{
+                id
+            }}
+        }}
+        """
+        try:
+            response = requests.post(self.url,
+                                     json={'query': query},
+                                     headers=self.headers,
+                                     timeout=5000)
+
+            # Comprobar el estado de la respuesta
+            if response.status_code == 200:
+                # Convertir la respuesta JSON en un diccionario Python
+                data = response.json()
+                return data["data"]["change_simple_column_value"]["id"]
+            else:
+                print(f"Error: {response.status_code}")
+                print("Detalles:", response.text)
+                return None
+        except ValueError as e:
+            print(f"Error de valor: {e}")
+            return None
+        except requests.exceptions.HTTPError as e:
+            print(f"Error en solicitud: {e}")
+            return None

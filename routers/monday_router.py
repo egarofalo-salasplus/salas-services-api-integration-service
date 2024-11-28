@@ -21,7 +21,7 @@ monday_client = MondayAPIClient()
 
 
 # Modelos para recibir datos de solicitud
-class Items(RootModel):
+class GetColumnValuesParams(RootModel):
     root: Dict[str, str]
 
 @monday_router.get("/boards",
@@ -63,12 +63,12 @@ async def get_board_items(board_id: str = Query(None)):
 @monday_router.post("/get-column-values",
                     tags=["Monday Items"],
                     dependencies=[Depends(verify_secret_key)])
-async def get_column_values(items: Items):
+async def get_column_values(items: GetColumnValuesParams):
     """Obtener valores de columnas dados lo ids de las tareas
 
         Parameters
         ----------
-        items : dict
+        items : GetColumnValuesParamsb
             lista con los ids de las tareas en formato {item_id: title}
 
         Retorna
@@ -87,3 +87,30 @@ async def get_column_values(items: Items):
     items_dict = items.model_dump()
     
     return monday_client.get_column_values(items_dict)
+
+@monday_router.post("/set-column-value",
+                    tags=["Monday Items"],
+                    dependencies=[Depends(verify_secret_key)])
+async def set_column_value(board_id: str, item_id: str, column_id: str,
+                           value: str):
+    """Obtener valores de columnas dados lo ids de las tareas
+
+        Parameters
+        ----------
+        items : GetColumnValuesParamsb
+            lista con los ids de las tareas en formato {item_id: title}
+
+        Retorna
+        -------
+        dict
+            Devuelve la respuesta en JSON con el formato:
+            {
+                item_id: {
+                    name,
+                    hours,
+                    assignment
+                }
+            }
+            En caso de error devuelve None
+        """    
+    return monday_client.set_column_value(board_id, item_id, column_id, value)
