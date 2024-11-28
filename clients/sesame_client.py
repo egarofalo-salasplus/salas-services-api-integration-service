@@ -1079,9 +1079,9 @@ def call_api_with_backoff(endpoint, headers, params=None, max_retries=30, method
     while retries < max_retries:
         if method == "GET":
             response = requests.get(endpoint, headers=headers, params=params,
-                                    timeout=5000)
+                                    timeout=5000, verify=False)
         if method == "POST":
-            response = requests.post(url=endpoint, json=body, headers=headers)
+            response = requests.post(url=endpoint, json=body, headers=headers, verify=False)
         # si hay contenido en la respuesta
         if response.status_code == 200 and response.text:
             return response
