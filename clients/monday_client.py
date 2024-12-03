@@ -75,7 +75,8 @@ class MondayAPIClient:
                 print(f"Error: {response.status_code}")
                 print("Detalles:", response.text)
 
-            boards = {board["name"]: board["id"] for board in data["data"]["boards"]}
+            boards = {board["name"]: board["id"]
+                      for board in data["data"]["boards"]}
 
             return boards
         except ValueError as e:
@@ -176,7 +177,7 @@ class MondayAPIClient:
             return None
 
     def get_column_values(self, items: Dict[str, str]):
-        """Obtener valores de columnas dados lo ids de las tareas
+        """Obtener valores de columnas dados los ids de las tareas
 
         Parameters
         ----------
@@ -245,8 +246,10 @@ class MondayAPIClient:
                             if column["value"]:
                                 assignment = column["value"].split('\"')[3]
                 except ValueError as e:
-                    print(f"¡Error! {e}. Es posible que algún campo no contenga ningún valor.")
-                task_asigments[list(items.keys())[i]] = {"name": list(items.values())[i], "hours": hours, "assignment": assignment}
+                    print(
+                        f"¡Error! {e}. Es posible que algún campo no contenga ningún valor.")
+                task_asigments[list(items.keys())[i]] = {"name": list(items.values())[
+                    i], "hours": hours, "assignment": assignment}
             return task_asigments
         except ValueError as e:
             print(f"Error de valor: {e}")

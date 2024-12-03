@@ -4,7 +4,7 @@ trigger:
       - main
 
 variables:
-  APP_NAME: 'human-resources-service'
+  APP_NAME: 'api-integration-ms'
   CONTAINER_REG: 'salasmicroservicesacr'
   WEB_APP: 'api-integration-ms'
   RESOURCE_GROUP: 'data-management-group'
