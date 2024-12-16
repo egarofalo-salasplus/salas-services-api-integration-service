@@ -389,6 +389,7 @@ class SesameAPIClient:
                     # Campos personalizados
                     'cf_area': next((cf['value'] for cf in record.get('customFields', []) if cf['slug'] == 'cf_rea'), None),
                     'cf_precio_hora_empresa': next((cf['value'] for cf in record.get('customFields', []) if cf['slug'] == 'cf_precioh_empresa'), None),
+                    'cf_telefono_corto': next((cf['value'] for cf in record.get('customFields', []) if cf['slug'] == 'cf_telefono_corto'), None),
                 }
                 flat_records.append(flat_record)
 

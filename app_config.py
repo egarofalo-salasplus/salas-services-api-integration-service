@@ -11,12 +11,19 @@ app = FastAPI(
     version="1.1.0"
 )
 
+
+# Configura los orígenes permitidos
+origins = [
+    "https://human-resources-ms.azurewebsites.net",
+    "http://127.0.0.1:8181"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:8181"],  # Agrega el origen permitido
+    allow_origins=origins,  # Or ["*"] to allow all origins (not recommended for production)
     allow_credentials=True,
-    allow_methods=["*"],  # Métodos permitidos (GET, POST, etc.)
-    allow_headers=["*"],  # Encabezados permitidos
+    allow_methods=["*"],  # Permitir todos los métodos (GET, POST, etc.)
+    allow_headers=["*"],  # Permitir todos los encabezados
 )
 
 # Incluimos los routers en la app principal
