@@ -5,6 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, Query, HTTPException
 from auth.oauth import verify_secret_key
 from etls.etl_imputations import etl_imputations, get_task_status, update_task_status, tasks_status
+from etls.etl_employees import etl_employees
 from pydantic import BaseModel
 from typing import Dict
 import asyncio
@@ -20,6 +21,53 @@ class TaskResponse(BaseModel):
     status: str
     message: str
 
+
+@etl_router.get("/run-etl-employees",
+                tags=["ETL Process"],
+                dependencies=[Depends(verify_secret_key)],)
+async def run_etl_imputations():
+    """endpoint para ejectuar proces ETL empleados desde Sesame HR
+    hacia Data Warehouse
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
+    # Ejecutar función ELT
+    logging.info("Inicio de ETL para empleados desde SESAME.")
+    etl_employees()
+
+
+# Endpoint para verificar el estado del ETL
+@etl_router.get(
+    "/run-etl-imputations/status/{task_id}",
+    tags=["ETL Process"],
+    response_model=TaskResponse,
+    dependencies=[Depends(verify_secret_key)],
+)
+async def get_etl_imputations_status(task_id: str):
+    """Verificar estado de tarea etl_imputaciones"""
+    # Obtiene el estado actual de la tarea
+    task_info = await get_task_status(task_id)
+
+    return TaskResponse(
+        task_id=task_id,
+        status=task_info["status"],
+        message=task_info["message"],
+    )
+
+
+def validate_date_format(date_str: str):
+    """Valida que la cadena esté en formato YYYY-MM-DD."""
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Formato de fecha incorrecto: {date_str}. Use YYYY-MM-DD.")
 
 @etl_router.get("/run-etl-imputations",
                 tags=["ETL Process"],
@@ -72,32 +120,3 @@ async def run_etl_imputations(
         status="in_progress",
         message="The ETL process has been initiated. Use the task_id to check the status.",
     )
-
-
-# Endpoint para verificar el estado del ETL
-@etl_router.get(
-    "/run-etl-imputations/status/{task_id}",
-    tags=["ETL Process"],
-    response_model=TaskResponse,
-    dependencies=[Depends(verify_secret_key)],
-)
-async def get_etl_imputations_status(task_id: str):
-    """Verificar estado de tarea etl_imputaciones"""
-    # Obtiene el estado actual de la tarea
-    task_info = await get_task_status(task_id)
-
-    return TaskResponse(
-        task_id=task_id,
-        status=task_info["status"],
-        message=task_info["message"],
-    )
-
-
-def validate_date_format(date_str: str):
-    """Valida que la cadena esté en formato YYYY-MM-DD."""
-    try:
-        return datetime.strptime(date_str, "%Y-%m-%d").date()
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Formato de fecha incorrecto: {date_str}. Use YYYY-MM-DD.")
