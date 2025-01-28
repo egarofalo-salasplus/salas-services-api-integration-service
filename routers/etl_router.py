@@ -13,6 +13,7 @@ from etls.etl_imputations import (
 )
 from etls.etl_employees import etl_employees
 from etls.etl_projects import etl_projects
+from etls.etl_departments import etl_departments
 from pydantic import BaseModel
 from typing import Dict
 import asyncio
@@ -30,11 +31,32 @@ class TaskResponse(BaseModel):
 
 
 @etl_router.get(
+    "/run-etl-departments",
+    tags=["ETL Process"],
+    dependencies=[Depends(verify_secret_key)],
+)
+async def run_etl_departments():
+    """endpoint para ejectuar proceso ETL de departamentos desde Sesame HR
+    hacia Data Warehouse
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
+    # Ejecutar función ELT
+    logging.info("Inicio de ETL para departamentos desde SESAME.")
+    etl_departments()
+
+
+@etl_router.get(
     "/run-etl-projects",
     tags=["ETL Process"],
     dependencies=[Depends(verify_secret_key)],
 )
-async def run_etl_imputations():
+async def run_etl_projects():
     """endpoint para ejectuar proceso ETL de proyectos desde Sesame HR
     hacia Data Warehouse
 

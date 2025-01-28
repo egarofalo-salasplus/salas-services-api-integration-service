@@ -198,6 +198,27 @@ class ProjectQueryParams(BaseModel):
     order_by: Optional[int] = None
 
 
+class DepartmentQueryParams(BaseModel):
+    """
+    Modelo para los parámetros de consulta de departamentos
+    Parámetros
+        ----------
+        name : str
+            Nombre del departamento.
+        page : int, opcional
+            Solicitar una página específica de resultados.
+        limit : int, opcional
+            Limitar el número de resultados.
+        order_by: str, opcional
+            "field1 asc, field2 desc"
+    """
+
+    name: Optional[str] = None
+    page: Optional[str] = None
+    limit: Optional[int] = None
+    order_by: Optional[int] = None
+
+
 # Funciones para transformar los parámetros de consulta en modelos `BaseModel`
 def get_employee_query_params(
     code: Optional[int] = Query(None),
@@ -422,7 +443,7 @@ def get_project_query_params(
     page: Optional[str] = Query(None),
     limit: Optional[int] = Query(None),
     order_by: Optional[int] = Query(None),
-) -> DepartmentAssignationQueryParams:
+) -> ProjectQueryParams:
     """
     Obtener los parámetros de consulta para empleados.
 
@@ -445,6 +466,34 @@ def get_project_query_params(
     return ProjectQueryParams(
         company_id=company_id, page=page, limit=limit, order_by=order_by
     )
+
+
+def get_department_query_params(
+    name: Optional[str] = Query(None),
+    page: Optional[str] = Query(None),
+    limit: Optional[int] = Query(None),
+    order_by: Optional[int] = Query(None),
+) -> DepartmentQueryParams:
+    """
+    Obtener los parámetros de consulta para departamentos
+
+    Parámetros
+        ----------
+        name : str, opcional
+            Nombre del departamento.
+        page : int, opcional
+            Solicitar una página específica de resultados.
+        limit : int, opcional
+            Limitar el número de resultados.
+        order_by: str, opcional
+            "field1 asc, field2 desc"
+
+    Retorna
+    -------
+    DepartmentQueryParams
+        Instancia de DepartmentQueryParams con los valores especificados.
+    """
+    return DepartmentQueryParams(name=name, page=page, limit=limit, order_by=order_by)
 
 
 # Rutas de la API utilizando el cliente de SesameAPI
@@ -906,6 +955,73 @@ async def get_projets_csv(
         io.StringIO(csv_data),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=projects.csv"},
+    )
+
+    return response
+
+
+@sesame_router.get(
+    "/departments",
+    tags=["Sesame Deparments"],
+    dependencies=[Depends(verify_secret_key)],
+)
+async def get_departments(
+    query_params: DepartmentQueryParams = Depends(get_department_query_params),
+):
+    """
+    Obtener los departamentos
+
+    Parámetros
+    ----------
+    query_params : DepartmentQueryParams
+        Parámetros de búsqueda de departamentos
+
+    Retorna
+    -------
+    dict
+        Los departamentos en formato JSON.
+    """
+    return sesame_client.get_departments(
+        name=query_params.name,
+        page=query_params.page,
+        limit=query_params.limit,
+        order_by=query_params.order_by,
+    ).json()
+
+
+@sesame_router.get(
+    "/departments-csv",
+    tags=["Sesame ETL"],
+    dependencies=[Depends(verify_secret_key)],
+)
+async def get_departments_csv(
+    query_params: DepartmentQueryParams = Depends(get_department_query_params),
+):
+    """
+    Obtener departamentos en formato CSV
+
+    Parámetros
+    ----------
+    query_params : DepartmentQueryParams
+        Parámetros de búsqueda de departamentos
+
+    Retorna
+    -------
+    text
+        Los departamentos en formato csv.
+    """
+    csv_data = sesame_client.get_departments_csv(
+        name=query_params.name,
+        page=query_params.page,
+        limit=query_params.limit,
+        order_by=query_params.order_by,
+    )
+
+    # Convertir el texto CSV a un stream y devolverlo como respuesta
+    response = StreamingResponse(
+        io.StringIO(csv_data),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=departments.csv"},
     )
 
     return response

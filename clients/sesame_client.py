@@ -1333,6 +1333,131 @@ class SesameAPIClient:
             print(f"RECORD: {record}")
             return ""
 
+    def get_departments(self, name=None, page=None, limit=None, order_by=None):
+        """
+        Obtener los departamentos existentes
+
+        Parámetros
+        ----------
+        name : str, opcional
+            Nombre del departamento
+        page : int, opcional
+            Solicitar una página específica de resultados.
+        limit : int, opcional
+            Limitar el número de resultados.
+        order_by: str, opcional
+            "field1 asc, field2 desc"
+
+        Retorna
+        -------
+        Json
+            La respuesta en formato json de la API con los deparmentos
+        """
+        url = f"{self.base_url}/core/v3/departments"
+        params = {"name": name, "page": page, "limit": limit, "orderBy": order_by}
+        # Eliminar parámetros nulos
+        params = {k: v for k, v in params.items() if v is not None}
+        response = call_api_with_backoff(url, self.headers, params)
+        return response
+
+    def get_departments_csv(self, name=None, page=None, limit=None, order_by=None):
+        """
+        Obtener los proyectos existentes
+
+        Parámetros
+        ----------
+        name : str, opcional
+            Nombre del departamento
+        page : int, opcional
+            Solicitar una página específica de resultados.
+        limit : int, opcional
+            Limitar el número de resultados.
+        order_by: str, opcional
+            "field1 asc, field2 desc"
+
+        Retorna
+        -------
+        text
+            La respuesta en formato CSV de la API con los departametnos
+        """
+        url = f"{self.base_url}/core/v3/departments"
+        params = {"name": name, "page": page, "limit": limit, "orderBy": order_by}
+        # Eliminar parámetros nulos
+        params = {k: v for k, v in params.items() if v is not None}
+
+        # Si no se especifica la página, devolverlas todas
+        records = []
+        try:
+            if page is None:
+                for key in self.all_api_keys:
+                    headers = {
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json",
+                    }
+                    page = 1
+                    limit = 100
+                    while True:
+                        params = {
+                            "name": name,
+                            "page": page,
+                            "limit": limit,
+                            "orderBy": order_by,
+                        }
+
+                        response = call_api_with_backoff(url, headers, params)
+
+                        # Verificar si la solicitud fue exitosa
+                        response.raise_for_status()
+
+                        # Parsear la respuesta JSON
+                        data = response.json()
+
+                        if not data["data"]:
+                            break
+
+                        records.extend(data["data"])
+
+                        page += 1
+
+            response = call_api_with_backoff(url, self.headers, params)
+
+            # Verificar si la solicitud fue exitosa
+            response.raise_for_status()
+
+            # Parsear la respuesta JSON
+            data = response.json()
+
+            # Extrear la porsión de los datos que alimentarán el DataFrame
+            if not records:
+                records = data.get("data", [])
+
+            # Crear una lista de registros planos para cada empleado
+            flat_records = []
+            for record in records:
+                # Datos a extraer
+                flat_record = {
+                    "id": record.get("id"),
+                    "name": record.get("name"),
+                }
+                flat_records.append(flat_record)
+
+            df = pd.DataFrame(flat_records)
+
+            # Convertir el DataFrame a un formato CSV en un string
+            output = io.StringIO()
+            df.to_csv(output, index=False)
+
+            return output.getvalue()
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error en la solicitud: {e}")
+            # Retorna un DataFrame vacío en caso de error
+            return ""
+        except TypeError as terror:
+            print(f"Error de tipo: {str(terror)}")
+            print(f"RECORD: {record}")
+            return ""
+
 
 def call_api_with_backoff(
     endpoint, headers, params=None, max_retries=30, method="GET", body=None
