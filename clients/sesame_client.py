@@ -7,6 +7,7 @@ La clase proporciona varios métodos para obtener información detallada de
 empleados, horas trabajadas y fichajes, haciendo solicitudes a los
 diferentes endpoints de la API.
 """
+
 import requests
 import logging
 from decouple import config
@@ -17,17 +18,19 @@ import time
 
 
 # Secret keys para las diversas empresas
-plushabit_key = config("SESAME_API_KEY",
-                       default=os.getenv("SESAME_API_KEY"))
+plushabit_key = config("SESAME_API_KEY", default=os.getenv("SESAME_API_KEY"))
 
-construhabit_key = config("SESAME_CONSTRUHABIT_API_KEY",
-                          default=os.getenv("SESAME_CONSTRUHABIT_API_KEY"))
+construhabit_key = config(
+    "SESAME_CONSTRUHABIT_API_KEY", default=os.getenv("SESAME_CONSTRUHABIT_API_KEY")
+)
 
-greenpower_key = config("SESAME_GREENPOWER_API_KEY",
-                        default=os.getenv("SESAME_GREENPOWER_API_KEY"))
+greenpower_key = config(
+    "SESAME_GREENPOWER_API_KEY", default=os.getenv("SESAME_GREENPOWER_API_KEY")
+)
 
-noulloc_key = config("SESAME_NOULLOC_API_KEY",
-                     default=os.getenv("SESAME_NOULLOC_API_KEY"))
+noulloc_key = config(
+    "SESAME_NOULLOC_API_KEY", default=os.getenv("SESAME_NOULLOC_API_KEY")
+)
 
 # Lista de clientes para todas las empresas
 all_api_keys = [plushabit_key, construhabit_key, greenpower_key, noulloc_key]
@@ -62,7 +65,7 @@ class SesameAPIClient:
         self.all_api_keys = all_api_keys
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
     # Métodos para la sección "Security"
@@ -84,9 +87,18 @@ class SesameAPIClient:
             return e
 
     # Métodos para la sección "Employees"
-    def get_employees(self, code=None, dni=None, email=None,
-                      department_ids=None, office_ids=None, limit=None,
-                      page=None, order_by=None, status=None):
+    def get_employees(
+        self,
+        code=None,
+        dni=None,
+        email=None,
+        department_ids=None,
+        office_ids=None,
+        limit=None,
+        page=None,
+        order_by=None,
+        status=None,
+    ):
         """
         Obtener una lista de empleados basada en los parámetros dados.
 
@@ -127,48 +139,49 @@ class SesameAPIClient:
             "limit": limit,
             "page": page,
             "orderBy": order_by,
-            "status": status
+            "status": status,
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
         response = call_api_with_backoff(url, self.headers, params)
         return response
 
-    def post_employees(self,
-                        companyId,
-                        firstName,
-                        lastName,
-                        email,
-                        nid,
-                        invitation=None,
-                        status=None,
-                        gender=None,
-                        contractId=None,
-                        code=None,
-                        pin=None,
-                        identityNumberType=None,
-                        ssn=None,
-                        phone=None,
-                        dateOfBirth=None,
-                        nationality=None,
-                        maritalStatus=None,
-                        address=None,
-                        postalCode=None,
-                        emergencyPhone=None,
-                        childrenCount=None,
-                        disability=None,
-                        personalEmail=None,
-                        description=None,
-                        city=None,
-                        province=None,
-                        country=None,
-                        salaryRange=None,
-                        studyLevel=None,
-                        professionalCategoryCode=None,
-                        professionalCategoryDescription=None,
-                        bic=None,
-                        jobChargeId=None):
-
+    def post_employees(
+        self,
+        companyId,
+        firstName,
+        lastName,
+        email,
+        nid,
+        invitation=None,
+        status=None,
+        gender=None,
+        contractId=None,
+        code=None,
+        pin=None,
+        identityNumberType=None,
+        ssn=None,
+        phone=None,
+        dateOfBirth=None,
+        nationality=None,
+        maritalStatus=None,
+        address=None,
+        postalCode=None,
+        emergencyPhone=None,
+        childrenCount=None,
+        disability=None,
+        personalEmail=None,
+        description=None,
+        city=None,
+        province=None,
+        country=None,
+        salaryRange=None,
+        studyLevel=None,
+        professionalCategoryCode=None,
+        professionalCategoryDescription=None,
+        bic=None,
+        jobChargeId=None,
+    ):
         """
         Crear un nuevo empleado en el sistema.
 
@@ -187,74 +200,86 @@ class SesameAPIClient:
             - gender (str): Género del empleado.
             - contract_id (str): ID del contrato.
             - ... (y muchos otros).
-        
+
         Retorna
         -------
         dict
             Respuesta de la API tras realizar la solicitud.
         """
 
-        #Validar campos obligatorios
-        required_fields = {"companyId": companyId, 
-                           "firstName": firstName,
-                           "lastName": lastName, 
-                           "email": email, 
-                           "nid": nid
+        # Validar campos obligatorios
+        required_fields = {
+            "companyId": companyId,
+            "firstName": firstName,
+            "lastName": lastName,
+            "email": email,
+            "nid": nid,
         }
 
-        missing_fields = [field for field, value in required_fields.items() if not value]
+        missing_fields = [
+            field for field, value in required_fields.items() if not value
+        ]
         if missing_fields:
             raise ValueError(f"Faltan campos obligatorios: {', '.join(missing_fields)}")
 
-        #Construir el mensaje del cuerpo
+        # Construir el mensaje del cuerpo
         body = {
-                "companyId": companyId,
-                "firstName": firstName,
-                "lastName": lastName,
-                "invitation": invitation,
-                "status": status,
-                "gender": gender,
-                "email": email,
-                "contractId": contractId,
-                "code": code,
-                "pin": pin,
-                "nid": nid,
-                "identityNumberType": identityNumberType,
-                "ssn": ssn,
-                "phone": phone,
-                "dateOfBirth": dateOfBirth,
-                "nationality": nationality,
-                "maritalStatus": maritalStatus,
-                "address": address,
-                "postalCode": postalCode,
-                "emergencyPhone": emergencyPhone,
-                "childrenCount": childrenCount,
-                "disability": disability,
-                "personalEmail": personalEmail,
-                "description": description,
-                "city": city,
-                "province": province,
-                "country": country,
-                "salaryRange": salaryRange,
-                "studyLevel": studyLevel,
-                "professionalCategoryCode": professionalCategoryCode,
-                "professionalCategoryDescription": professionalCategoryDescription,
-                "bic": bic,
-                "jobChargeId": jobChargeId
+            "companyId": companyId,
+            "firstName": firstName,
+            "lastName": lastName,
+            "invitation": invitation,
+            "status": status,
+            "gender": gender,
+            "email": email,
+            "contractId": contractId,
+            "code": code,
+            "pin": pin,
+            "nid": nid,
+            "identityNumberType": identityNumberType,
+            "ssn": ssn,
+            "phone": phone,
+            "dateOfBirth": dateOfBirth,
+            "nationality": nationality,
+            "maritalStatus": maritalStatus,
+            "address": address,
+            "postalCode": postalCode,
+            "emergencyPhone": emergencyPhone,
+            "childrenCount": childrenCount,
+            "disability": disability,
+            "personalEmail": personalEmail,
+            "description": description,
+            "city": city,
+            "province": province,
+            "country": country,
+            "salaryRange": salaryRange,
+            "studyLevel": studyLevel,
+            "professionalCategoryCode": professionalCategoryCode,
+            "professionalCategoryDescription": professionalCategoryDescription,
+            "bic": bic,
+            "jobChargeId": jobChargeId,
         }
 
         # Limpiar claves con valores nulos
         body = {k: v for k, v in body.items() if v is not None}
 
         url = f"{self.base_url}/core/v3/employees"
-        
+
         # Llamar a la API con el cuerpo de la solicitud
         response = requests.post(url, json=body, headers=self.headers)
         return response
-        
-    def get_employees_csv(self, code=None, dni=None, email=None,
-                          department_ids=None, office_ids=None, limit=None,
-                          page=None, order_by=None, status=None):
+
+    def get_employees_csv(
+        self,
+        code=None,
+        dni=None,
+        email=None,
+        department_ids=None,
+        office_ids=None,
+        limit=None,
+        page=None,
+        order_by=None,
+        status=None,
+    ):
         """
         Obtener un csv de empleados basada en los parámetros dados
 
@@ -296,7 +321,7 @@ class SesameAPIClient:
             "limit": limit,
             "page": page,
             "orderBy": order_by,
-            "status": status
+            "status": status,
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
@@ -306,7 +331,7 @@ class SesameAPIClient:
                 for key in self.all_api_keys:
                     headers = {
                         "Authorization": f"Bearer {key}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     }
                     page = 1
                     limit = 100
@@ -320,7 +345,7 @@ class SesameAPIClient:
                             "limit": limit,
                             "page": page,
                             "orderBy": order_by,
-                            "status": status
+                            "status": status,
                         }
                         response = call_api_with_backoff(url, headers, params)
 
@@ -352,49 +377,102 @@ class SesameAPIClient:
             for record in records:
                 # Datos a extraer
                 flat_record = {
-                    'id': record.get('id'),
-                    'firstName': record.get('firstName'),
-                    'lastName': record.get('lastName'),
-                    'email': record.get('email'),
-                    'work_status': record.get('workStatus'),
-                    'profile_image_url': record.get('imageProfileURL'),
-                    'code': record.get('code'),
-                    'pin': record.get('pin'),
-                    'phone': record.get('phone'),
-                    'company_id': record.get('company', {}).get('id'),
-                    'company_name': record.get('company', {}).get('name'),
-                    'gender': record.get('gender'),
-                    'contract_id': record.get('contractId'),
-                    'nid': record.get('nid'),
-                    'identity_number_type': record.get('identityNumberType'),
-                    'ssn': record.get('ssn'),
-                    'price_per_hour': record.get('pricePerHour'),
-                    'account_number': record.get('accountNumber'),
-                    'date_of_birth': record.get('dateOfBirth'),
-                    'cf_work_phone': next((cf['value'] for cf in record.get('customFields', []) if cf['slug'] == 'cf_work_phone'), None),
-                    'cf_area': next((cf['value'] for cf in record.get('customFields', []) if cf['slug'] == 'cf_rea'), None),
-                    'cf_precio_hora_empresa': next((cf['value'] for cf in record.get('customFields', []) if cf['slug'] == 'cf_precioh_empresa'), None),
-                    'cf_fecha_de_alta': next((cf['value'] for cf in record.get('customFields', []) if cf['slug'] == 'cf_fecha_de_alta'), None),
-                    'cf_nucleo_de_negocio': next((cf['value'] for cf in record.get('customFields', []) if cf['slug'] == 'cf_nucleo_de_negocio'), None),
-                    'cf_studies': next((cf['value'] for cf in record.get('customFields', []) if cf['slug'] == 'ccf_studies'), None),
-                    'cf_telefono_corto': next((cf['value'] for cf in record.get('customFields', []) if cf['slug'] == 'cf_telefono_corto'), None),
-                    'status': record.get('status'),
-                    'children': record.get('children'),
-                    'disability': record.get('disability'),
-                    'address': record.get('address'),
-                    'postal_code': record.get('postalCode'),
-                    'city': record.get('city'),
-                    'province': record.get('province'),
-                    'country': record.get('country'),
-                    'nationality': record.get('nationality'),
-                    'marital_status': record.get('maritalStatus'),
-                    'salary_range': record.get('salaryRange'),
-                    'study_level': record.get('studyLevel'),
-                    'professional_category_code': record.get('professionalCategoryCode'),
-                    'professional_category_description': record.get('professionalCategoryDescription'),
-                    'bic': record.get('bic'),
-                    'job_charge_id': record.get('jobChargeId'),
-                    'job_charge_name': record.get('jobChargeName'),
+                    "id": record.get("id"),
+                    "firstName": record.get("firstName"),
+                    "lastName": record.get("lastName"),
+                    "email": record.get("email"),
+                    "work_status": record.get("workStatus"),
+                    "profile_image_url": record.get("imageProfileURL"),
+                    "code": record.get("code"),
+                    "pin": record.get("pin"),
+                    "phone": record.get("phone"),
+                    "company_id": record.get("company", {}).get("id"),
+                    "company_name": record.get("company", {}).get("name"),
+                    "gender": record.get("gender"),
+                    "contract_id": record.get("contractId"),
+                    "nid": record.get("nid"),
+                    "identity_number_type": record.get("identityNumberType"),
+                    "ssn": record.get("ssn"),
+                    "price_per_hour": record.get("pricePerHour"),
+                    "account_number": record.get("accountNumber"),
+                    "date_of_birth": record.get("dateOfBirth"),
+                    "cf_work_phone": next(
+                        (
+                            cf["value"]
+                            for cf in record.get("customFields", [])
+                            if cf["slug"] == "cf_work_phone"
+                        ),
+                        None,
+                    ),
+                    "cf_area": next(
+                        (
+                            cf["value"]
+                            for cf in record.get("customFields", [])
+                            if cf["slug"] == "cf_rea"
+                        ),
+                        None,
+                    ),
+                    "cf_precio_hora_empresa": next(
+                        (
+                            cf["value"]
+                            for cf in record.get("customFields", [])
+                            if cf["slug"] == "cf_precioh_empresa"
+                        ),
+                        None,
+                    ),
+                    "cf_fecha_de_alta": next(
+                        (
+                            cf["value"]
+                            for cf in record.get("customFields", [])
+                            if cf["slug"] == "cf_fecha_de_alta"
+                        ),
+                        None,
+                    ),
+                    "cf_nucleo_de_negocio": next(
+                        (
+                            cf["value"]
+                            for cf in record.get("customFields", [])
+                            if cf["slug"] == "cf_nucleo_de_negocio"
+                        ),
+                        None,
+                    ),
+                    "cf_studies": next(
+                        (
+                            cf["value"]
+                            for cf in record.get("customFields", [])
+                            if cf["slug"] == "ccf_studies"
+                        ),
+                        None,
+                    ),
+                    "cf_telefono_corto": next(
+                        (
+                            cf["value"]
+                            for cf in record.get("customFields", [])
+                            if cf["slug"] == "cf_telefono_corto"
+                        ),
+                        None,
+                    ),
+                    "status": record.get("status"),
+                    "children": record.get("children"),
+                    "disability": record.get("disability"),
+                    "address": record.get("address"),
+                    "postal_code": record.get("postalCode"),
+                    "city": record.get("city"),
+                    "province": record.get("province"),
+                    "country": record.get("country"),
+                    "nationality": record.get("nationality"),
+                    "marital_status": record.get("maritalStatus"),
+                    "salary_range": record.get("salaryRange"),
+                    "study_level": record.get("studyLevel"),
+                    "professional_category_code": record.get(
+                        "professionalCategoryCode"
+                    ),
+                    "professional_category_description": record.get(
+                        "professionalCategoryDescription"
+                    ),
+                    "bic": record.get("bic"),
+                    "job_charge_id": record.get("jobChargeId"),
+                    "job_charge_name": record.get("jobChargeName"),
                 }
                 flat_records.append(flat_record)
 
@@ -428,15 +506,20 @@ class SesameAPIClient:
             La respuesta en formato JSON de la API los datos del empleado.
         """
         url = f"{self.base_url}/core/v3/employees/{employee_id}"
-        params = {
-            "id": employee_id
-        }
+        params = {"id": employee_id}
         response = call_api_with_backoff(url, self.headers, params)
         return response
 
     # Sección Statistics
-    def get_worked_hours(self, employee_ids=None, with_checks=None,
-                         from_date=None, to_date=None, limit=None, page=None):
+    def get_worked_hours(
+        self,
+        employee_ids=None,
+        with_checks=None,
+        from_date=None,
+        to_date=None,
+        limit=None,
+        page=None,
+    ):
         """
         Obtener las horas trabajadas por los empleados según los parámetros
         dados. De los datos devueltos se pueden obtener las horas teóricas.
@@ -468,16 +551,22 @@ class SesameAPIClient:
             "from": from_date,
             "to": to_date,
             "limit": limit,
-            "page": page
+            "page": page,
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
         response = call_api_with_backoff(url, self.headers, params)
         return response
 
-    def get_worked_hours_csv(self, employee_ids=None, with_checks=None,
-                             from_date=None, to_date=None, limit=None,
-                             page=None):
+    def get_worked_hours_csv(
+        self,
+        employee_ids=None,
+        with_checks=None,
+        from_date=None,
+        to_date=None,
+        limit=None,
+        page=None,
+    ):
         """
         Obtener las horas trabajadas por los empleados según los parámetros
         dados. De los datos devueltos se pueden obtener las horas teóricas.
@@ -509,7 +598,7 @@ class SesameAPIClient:
             "from": from_date,
             "to": to_date,
             "limit": limit,
-            "page": page
+            "page": page,
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
@@ -521,7 +610,7 @@ class SesameAPIClient:
                 for key in self.all_api_keys:
                     headers = {
                         "Authorization": f"Bearer {key}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     }
                     page = 1
                     limit = 100
@@ -532,10 +621,10 @@ class SesameAPIClient:
                             "from": from_date,
                             "to": to_date,
                             "limit": limit,
-                            "page": page
+                            "page": page,
                         }
                         response = call_api_with_backoff(url, headers, params)
-                        
+
                         response.raise_for_status()
 
                         data = response.json()
@@ -544,9 +633,9 @@ class SesameAPIClient:
                             break
 
                         records.extend(data["data"])
-                        
+
                         page += 1
-        
+
             response = call_api_with_backoff(url, self.headers, params)
 
             # Verificar si la solicitud fue exitosa
@@ -571,10 +660,18 @@ class SesameAPIClient:
             print(f"Error en la solicitud: {e}")
             return ""
 
-    def get_work_entries(self, employee_id=None, from_date=None, to_date=None,
-                         updated_at_gte=None, updated_at_lte=None,
-                         only_return=None, limit=None, page=None,
-                         order_by=None):
+    def get_work_entries(
+        self,
+        employee_id=None,
+        from_date=None,
+        to_date=None,
+        updated_at_gte=None,
+        updated_at_lte=None,
+        only_return=None,
+        limit=None,
+        page=None,
+        order_by=None,
+    ):
         """
         Obtener los fichajes de la compañía
 
@@ -616,17 +713,25 @@ class SesameAPIClient:
             "onlyReturn": only_return,
             "limit": limit,
             "page": page,
-            "orderBy": order_by
+            "orderBy": order_by,
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
         response = call_api_with_backoff(url, self.headers, params)
         return response
 
-    def get_work_entries_csv(self, employee_id=None, from_date=None,
-                             to_date=None, updated_at_gte=None,
-                             updated_at_lte=None, only_return=None,
-                             limit=None, page=None, order_by=None):
+    def get_work_entries_csv(
+        self,
+        employee_id=None,
+        from_date=None,
+        to_date=None,
+        updated_at_gte=None,
+        updated_at_lte=None,
+        only_return=None,
+        limit=None,
+        page=None,
+        order_by=None,
+    ):
         """
         Obtener los fichajes de la compañía
 
@@ -668,7 +773,7 @@ class SesameAPIClient:
             "onlyReturn": only_return,
             "limit": limit,
             "page": page,
-            "orderBy": order_by
+            "orderBy": order_by,
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
@@ -680,7 +785,7 @@ class SesameAPIClient:
                 for key in self.all_api_keys:
                     headers = {
                         "Authorization": f"Bearer {key}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     }
                     page = 1
                     limit = 100
@@ -694,7 +799,7 @@ class SesameAPIClient:
                             "onlyReturn": only_return,
                             "limit": limit,
                             "page": page,
-                            "orderBy": order_by
+                            "orderBy": order_by,
                         }
                         response = call_api_with_backoff(url, headers, params)
                         # Verificar si la solicitud fue exitosa
@@ -728,13 +833,13 @@ class SesameAPIClient:
                 # Datos a extraer
                 try:
                     flat_record = {
-                        'id': record.get('id'),
-                        'employee_id': record.get('employee')["id"],
-                        'work_entry_type': record.get('workEntryType'),
-                        'worked_seconds': record.get('workedSeconds'),
-                        'work_entry_in_datetime': record.get('workEntryIn')['date'],
-                        'work_entry_out_datetime': record.get('workEntryOut')['date'],
-                        'work_break_id': record.get('workBreakId'),
+                        "id": record.get("id"),
+                        "employee_id": record.get("employee")["id"],
+                        "work_entry_type": record.get("workEntryType"),
+                        "worked_seconds": record.get("workedSeconds"),
+                        "work_entry_in_datetime": record.get("workEntryIn")["date"],
+                        "work_entry_out_datetime": record.get("workEntryOut")["date"],
+                        "work_break_id": record.get("workBreakId"),
                     }
                     flat_records.append(flat_record)
                 except TypeError:
@@ -756,8 +861,15 @@ class SesameAPIClient:
             print(f"RECORD: {record}")
             return ""
 
-    def get_time_entries(self, employee_id=None, from_date=None, to_date=None,
-                         employee_status=None, limit=None, page=None):
+    def get_time_entries(
+        self,
+        employee_id=None,
+        from_date=None,
+        to_date=None,
+        employee_status=None,
+        limit=None,
+        page=None,
+    ):
         """
         Obtener las imputaciones de los empleados basadas en los parámetros
         dados.
@@ -790,16 +902,22 @@ class SesameAPIClient:
             "to": to_date,
             "employeeStatus": employee_status,
             "limit": limit,
-            "page": page
+            "page": page,
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
         response = call_api_with_backoff(url, self.headers, params)
         return response
 
-    def get_time_entries_csv(self, employee_id=None, from_date=None,
-                             to_date=None, employee_status=None, limit=None,
-                             page=None):
+    def get_time_entries_csv(
+        self,
+        employee_id=None,
+        from_date=None,
+        to_date=None,
+        employee_status=None,
+        limit=None,
+        page=None,
+    ):
         """
         Obtener las imputaciones de los empleados basadas en los parámetros
         dados.
@@ -832,12 +950,12 @@ class SesameAPIClient:
             "to": to_date,
             "employeeStatus": employee_status,
             "limit": limit,
-            "page": page
+            "page": page,
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
         response = call_api_with_backoff(url, self.headers, params)
-        
+
         # Si no se especifica la página, devolverlas todas
         records = []
         try:
@@ -845,7 +963,7 @@ class SesameAPIClient:
                 for key in self.all_api_keys:
                     headers = {
                         "Authorization": f"Bearer {key}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     }
                     page = 1
                     limit = 100
@@ -856,7 +974,7 @@ class SesameAPIClient:
                             "to": to_date,
                             "employeeStatus": employee_status,
                             "limit": limit,
-                            "page": page
+                            "page": page,
                         }
                         response = call_api_with_backoff(url, headers, params)
 
@@ -890,26 +1008,26 @@ class SesameAPIClient:
             for record in records:
                 # Datos a extraer
                 tags = ""
-                for i, tag in enumerate(record.get('tags')["data"]):
+                for i, tag in enumerate(record.get("tags")["data"]):
                     tag_name = tag["name"]
                     tags += tag_name
-                    if i + 1 < len(record.get('tags')["data"]):
+                    if i + 1 < len(record.get("tags")["data"]):
                         tags += ","
 
                 project = ""
-                if record.get('project') is None:
+                if record.get("project") is None:
                     project = "No especificado"
                 else:
-                    project = record.get('project')["name"]
+                    project = record.get("project")["name"]
 
                 flat_record = {
-                    'id': record.get('id'),
-                    'employee_id': record.get('employee')["id"],
-                    'project': project,
-                    'time_entry_in_datetime': record.get('timeEntryIn')["date"],
-                    'time_entry_out_datetime': record.get('timeEntryOut')["date"],
-                    'tags': tags,
-                    'comment': record.get('comment'),
+                    "id": record.get("id"),
+                    "employee_id": record.get("employee")["id"],
+                    "project": project,
+                    "time_entry_in_datetime": record.get("timeEntryIn")["date"],
+                    "time_entry_out_datetime": record.get("timeEntryOut")["date"],
+                    "tags": tags,
+                    "comment": record.get("comment"),
                 }
                 flat_records.append(flat_record)
 
@@ -930,9 +1048,9 @@ class SesameAPIClient:
             print(f"RECORD: {record}")
             return ""
 
-    def get_employee_department_assignations(self, employee_id=None,
-                                             department_id=None,
-                                             limit=None, page=None):
+    def get_employee_department_assignations(
+        self, employee_id=None, department_id=None, limit=None, page=None
+    ):
         """
         Obtener las asignaciones a departamentos por empleado.
 
@@ -958,7 +1076,7 @@ class SesameAPIClient:
             "employeeId": employee_id,
             "departmentId": department_id,
             "limit": limit,
-            "page": page
+            "page": page,
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
@@ -966,10 +1084,8 @@ class SesameAPIClient:
         return response
 
     def get_employee_department_assignations_csv(
-        self, employee_id=None,
-        department_id=None,
-        limit=None,
-        page=None):
+        self, employee_id=None, department_id=None, limit=None, page=None
+    ):
         """
         Obtener las asignaciones a departamentos por empleado.
 
@@ -995,7 +1111,7 @@ class SesameAPIClient:
             "employeeId": employee_id,
             "departmentId": department_id,
             "limit": limit,
-            "page": page
+            "page": page,
         }
         # Eliminar parámetros nulos
         params = {k: v for k, v in params.items() if v is not None}
@@ -1008,7 +1124,7 @@ class SesameAPIClient:
                 for key in self.all_api_keys:
                     headers = {
                         "Authorization": f"Bearer {key}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     }
                     page = 1
                     limit = 100
@@ -1017,7 +1133,7 @@ class SesameAPIClient:
                             "employeeId": employee_id,
                             "departmentId": department_id,
                             "limit": limit,
-                            "page": page
+                            "page": page,
                         }
                         response = call_api_with_backoff(url, headers, params)
 
@@ -1051,14 +1167,152 @@ class SesameAPIClient:
             for record in records:
                 # Datos a extraer
                 flat_record = {
-                    'id': record.get('id'),
-                    'employee_id': record.get('employee')["id"],
-                    'department_id': record.get('department')["id"],
-                    'department_name': record.get('department')["name"],
-                    'company_id': record.get('employee')["company"]["id"],
-                    'company_name': record.get('employee')["company"]["name"],
-                    'created_at': record.get('createdAt'),
-                    'updated_at': record.get('updatedAt')
+                    "id": record.get("id"),
+                    "employee_id": record.get("employee")["id"],
+                    "department_id": record.get("department")["id"],
+                    "department_name": record.get("department")["name"],
+                    "company_id": record.get("employee")["company"]["id"],
+                    "company_name": record.get("employee")["company"]["name"],
+                    "created_at": record.get("createdAt"),
+                    "updated_at": record.get("updatedAt"),
+                }
+                flat_records.append(flat_record)
+
+            df = pd.DataFrame(flat_records)
+
+            # Convertir el DataFrame a un formato CSV en un string
+            output = io.StringIO()
+            df.to_csv(output, index=False)
+
+            return output.getvalue()
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error en la solicitud: {e}")
+            # Retorna un DataFrame vacío en caso de error
+            return ""
+        except TypeError as terror:
+            print(f"Error de tipo: {str(terror)}")
+            print(f"RECORD: {record}")
+            return ""
+
+    def get_projects(self, company_id=None, page=None, limit=None, order_by=None):
+        """
+        Obtener los proyectos existentes
+
+        Parámetros
+        ----------
+        company_id : str, opcional
+            El ID de la empresa.
+        page : int, opcional
+            Solicitar una página específica de resultados.
+        limit : int, opcional
+            Limitar el número de resultados.
+        order_by: str, opcional
+            "field1 asc, field2 desc"
+
+        Retorna
+        -------
+        text: csv
+            La respuesta en formato CSV de la API con los proyectos
+        """
+        url = f"{self.base_url}/project/v1/projects"
+        params = {"id": company_id, "page": page, "limit": limit, "orderBy": order_by}
+        # Eliminar parámetros nulos
+        params = {k: v for k, v in params.items() if v is not None}
+        response = call_api_with_backoff(url, self.headers, params)
+        return response
+
+    def get_projects_csv(self, company_id=None, page=None, limit=None, order_by=None):
+        """
+        Obtener los proyectos existentes
+
+        Parámetros
+        ----------
+        company_id : str, opcional
+            El ID de la empresa.
+        page : int, opcional
+            Solicitar una página específica de resultados.
+        limit : int, opcional
+            Limitar el número de resultados.
+        order_by: str, opcional
+            "field1 asc, field2 desc"
+
+        Retorna
+        -------
+        dict
+            La respuesta en formato JSON de la API con las asignaciones de
+            departamentos.
+        """
+        url = f"{self.base_url}/project/v1/projects"
+        params = {"id": company_id, "page": page, "limit": limit, "orderBy": order_by}
+        # Eliminar parámetros nulos
+        params = {k: v for k, v in params.items() if v is not None}
+
+        # Si no se especifica la página, devolverlas todas
+        records = []
+        try:
+            if page is None:
+                for key in self.all_api_keys:
+                    headers = {
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json",
+                    }
+                    page = 1
+                    limit = 100
+                    company_id = self.get_info().json().get("data")["company"]["id"]
+                    while True:
+                        params = {
+                            "id": company_id,
+                            "page": page,
+                            "limit": limit,
+                            "orderBy": order_by,
+                        }
+
+                        response = call_api_with_backoff(url, headers, params)
+
+                        # Verificar si la solicitud fue exitosa
+                        response.raise_for_status()
+
+                        # Parsear la respuesta JSON
+                        data = response.json()
+
+                        if not data["data"]:
+                            break
+
+                        records.extend(data["data"])
+
+                        page += 1
+
+            response = call_api_with_backoff(url, self.headers, params)
+
+            # Verificar si la solicitud fue exitosa
+            response.raise_for_status()
+
+            # Parsear la respuesta JSON
+            data = response.json()
+
+            # Extrear la porsión de los datos que alimentarán el DataFrame
+            if not records:
+                records = data.get("data", [])
+
+            # Crear una lista de registros planos para cada empleado
+            flat_records = []
+            for record in records:
+                # Datos a extraer
+                if record.get("customer") is None:
+                    customer_id = ""
+                    customer_name = ""
+                else:
+                    customer_id = record.get("customer")["id"]
+                    customer_name = record.get("customer")["customerName"]
+                flat_record = {
+                    "id": record.get("id"),
+                    "name": record.get("name"),
+                    "customer_id": customer_id,
+                    "customer_name": customer_name,
+                    "price": record.get("price"),
+                    "project_status": record.get("projectStatus")["value"],
+                    "external_project_id": record.get("externalProjectId"),
                 }
                 flat_records.append(flat_record)
 
@@ -1080,17 +1334,20 @@ class SesameAPIClient:
             return ""
 
 
-def call_api_with_backoff(endpoint, headers, params=None, max_retries=30, method="GET", body=None):
+def call_api_with_backoff(
+    endpoint, headers, params=None, max_retries=30, method="GET", body=None
+):
     retries = 0
     while retries < max_retries:
         if method == "GET":
-            response = requests.get(endpoint, headers=headers, params=params,
-                                    timeout=5000)
+            response = requests.get(
+                endpoint, headers=headers, params=params, timeout=5000
+            )
         if method == "POST":
             response = requests.post(url=endpoint, json=body, headers=headers)
         # si hay contenido en la respuesta
         if response.status_code == 200 and response.text:
             return response
-        time.sleep(5 ** retries)  # Exponential backoff
+        time.sleep(5**retries)  # Exponential backoff
         retries += 1
     return None  # Si no hay éxito después de varios intentos

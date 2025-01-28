@@ -1,11 +1,18 @@
 """Enrutador para gestionar llamadas que ejecutan procesos ETL
 """
+
 from datetime import datetime
 import logging
 from fastapi import APIRouter, Depends, Query, HTTPException
 from auth.oauth import verify_secret_key
-from etls.etl_imputations import etl_imputations, get_task_status, update_task_status, tasks_status
+from etls.etl_imputations import (
+    etl_imputations,
+    get_task_status,
+    update_task_status,
+    tasks_status,
+)
 from etls.etl_employees import etl_employees
+from etls.etl_projects import etl_projects
 from pydantic import BaseModel
 from typing import Dict
 import asyncio
@@ -22,9 +29,32 @@ class TaskResponse(BaseModel):
     message: str
 
 
-@etl_router.get("/run-etl-employees",
-                tags=["ETL Process"],
-                dependencies=[Depends(verify_secret_key)],)
+@etl_router.get(
+    "/run-etl-projects",
+    tags=["ETL Process"],
+    dependencies=[Depends(verify_secret_key)],
+)
+async def run_etl_imputations():
+    """endpoint para ejectuar proceso ETL de proyectos desde Sesame HR
+    hacia Data Warehouse
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
+    # Ejecutar función ELT
+    logging.info("Inicio de ETL para proyectos desde SESAME.")
+    etl_projects()
+
+
+@etl_router.get(
+    "/run-etl-employees",
+    tags=["ETL Process"],
+    dependencies=[Depends(verify_secret_key)],
+)
 async def run_etl_imputations():
     """endpoint para ejectuar proces ETL empleados desde Sesame HR
     hacia Data Warehouse
@@ -67,25 +97,27 @@ def validate_date_format(date_str: str):
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail=f"Formato de fecha incorrecto: {date_str}. Use YYYY-MM-DD.")
+            detail=f"Formato de fecha incorrecto: {date_str}. Use YYYY-MM-DD.",
+        )
 
-@etl_router.get("/run-etl-imputations",
-                tags=["ETL Process"],
-                response_model=TaskResponse,
-                status_code=201,
-                dependencies=[Depends(verify_secret_key)],)
+
+@etl_router.get(
+    "/run-etl-imputations",
+    tags=["ETL Process"],
+    response_model=TaskResponse,
+    status_code=201,
+    dependencies=[Depends(verify_secret_key)],
+)
 async def run_etl_imputations(
-    from_date: str = Query(...,
-                           description="Fecha de inicio en formato YYYY-MM-DD"),
-    to_date: str = Query(...,
-                         description="Fecha de fin en formato YYYY-MM-DD")
+    from_date: str = Query(..., description="Fecha de inicio en formato YYYY-MM-DD"),
+    to_date: str = Query(..., description="Fecha de fin en formato YYYY-MM-DD"),
 ):
     """endpoint para ejectuar proces ETL de imputaciones
 
     Parameters
     ----------
     from_date : str
-        Fecha de inicio, by default 
+        Fecha de inicio, by default
         Query(..., description="Fecha de inicio en formato YYYY-MM-DD")
     to_date : str, optional
         _description_, by default
@@ -105,8 +137,9 @@ async def run_etl_imputations(
 
     # Validación del rango de fechas
     if from_date_parsed > to_date_parsed:
-        raise HTTPException(status_code=400,
-                            detail="from_date debe ser anterior a to_date")
+        raise HTTPException(
+            status_code=400, detail="from_date debe ser anterior a to_date"
+        )
 
     # Almacena el estado inicial de la tarea
     await update_task_status(task_id, "in_progress", "ETL process is running")

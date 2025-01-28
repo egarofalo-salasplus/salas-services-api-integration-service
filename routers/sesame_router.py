@@ -7,6 +7,7 @@ empleados, horas trabajadas, fichajes, e imputaciones, basándose en el cliente
 La API permite realizar consultas a la API de Sesame mediante rutas que
 aceptan parámetros opcionales a través de modelos basados en Pydantic.
 """
+
 from typing import List, Optional
 import io
 from fastapi import APIRouter, Depends, Query
@@ -49,6 +50,7 @@ class EmployeeQueryParams(BaseModel):
     status : str, opcional
         Estado del empleado (activo o inactivo).
     """
+
     code: Optional[int] = None
     dni: Optional[str] = None
     email: Optional[str] = None
@@ -79,6 +81,7 @@ class WorkedHoursQueryParams(BaseModel):
     page : int, opcional
         Número de página para la paginación.
     """
+
     employee_ids: Optional[List[str]] = None
     with_checks: Optional[bool] = None
     from_date: str
@@ -112,6 +115,7 @@ class WorkEntriesQueryParams(BaseModel):
     order_by : str, opcional
         Orden de los resultados.
     """
+
     employee_id: Optional[str] = None
     from_date: Optional[str] = None
     to_date: Optional[str] = None
@@ -142,6 +146,7 @@ class TimeEntriesQueryParams(BaseModel):
     page : int, opcional
         Número de página para la paginación.
     """
+
     employee_id: Optional[str] = None
     from_date: Optional[str] = None
     to_date: Optional[str] = None
@@ -165,10 +170,32 @@ class DepartmentAssignationQueryParams(BaseModel):
     page : int, opcional
         Número de página para la paginación.
     """
+
     employee_id: Optional[str] = None
     department_id: Optional[str] = None
     limit: Optional[int] = None
     page: Optional[int] = None
+
+
+class ProjectQueryParams(BaseModel):
+    """
+    Modelo para los parámetros de consulta de proyectos
+    Parámetros
+        ----------
+        company_id : str
+            El ID de la empresa.
+        page : int, opcional
+            Solicitar una página específica de resultados.
+        limit : int, opcional
+            Limitar el número de resultados.
+        order_by: str, opcional
+            "field1 asc, field2 desc"
+    """
+
+    company_id: Optional[str] = None
+    page: Optional[str] = None
+    limit: Optional[int] = None
+    order_by: Optional[int] = None
 
 
 # Funciones para transformar los parámetros de consulta en modelos `BaseModel`
@@ -181,7 +208,7 @@ def get_employee_query_params(
     limit: Optional[int] = Query(None),
     page: Optional[int] = Query(None),
     order_by: Optional[str] = Query(None),
-    status: Optional[str] = Query(None)
+    status: Optional[str] = Query(None),
 ) -> EmployeeQueryParams:
     """
     Obtener los parámetros de consulta para empleados.
@@ -221,7 +248,7 @@ def get_employee_query_params(
         limit=limit,
         page=page,
         order_by=order_by,
-        status=status
+        status=status,
     )
 
 
@@ -231,7 +258,7 @@ def get_worked_hours_query_params(
     from_date: Optional[str] = Query(..., description="yyyy-mm-dd"),
     to_date: Optional[str] = Query(..., description="yyyy-mm-dd"),
     limit: Optional[int] = Query(None),
-    page: Optional[int] = Query(None)
+    page: Optional[int] = Query(None),
 ) -> WorkedHoursQueryParams:
     """
     Obtener los parámetros de consulta para horas trabajadas.
@@ -262,7 +289,7 @@ def get_worked_hours_query_params(
         from_date=from_date,
         to_date=to_date,
         limit=limit,
-        page=page
+        page=page,
     )
 
 
@@ -275,7 +302,7 @@ def get_work_entries_query_params(
     only_return: Optional[str] = Query(None),
     limit: Optional[int] = Query(None),
     page: Optional[int] = Query(None),
-    order_by: Optional[str] = Query(None)
+    order_by: Optional[str] = Query(None),
 ) -> WorkEntriesQueryParams:
     """
     Obtener los parámetros de consulta para fichajes.
@@ -315,7 +342,7 @@ def get_work_entries_query_params(
         only_return=only_return,
         limit=limit,
         page=page,
-        order_by=order_by
+        order_by=order_by,
     )
 
 
@@ -325,7 +352,7 @@ def get_time_entries_query_params(
     to_date: Optional[str] = Query(None, description="yyyy-mm-dd"),
     employee_status: Optional[str] = Query(None),
     limit: Optional[int] = Query(None),
-    page: Optional[int] = Query(None)
+    page: Optional[int] = Query(None),
 ) -> TimeEntriesQueryParams:
     """
     Obtener los parámetros de consulta para imputaciones.
@@ -356,15 +383,15 @@ def get_time_entries_query_params(
         to_date=to_date,
         employee_status=employee_status,
         limit=limit,
-        page=page
+        page=page,
     )
 
-    
+
 def get_department_assignation_query_params(
     employee_id: Optional[str] = Query(None),
     department_id: Optional[str] = Query(None),
     limit: Optional[int] = Query(None),
-    page: Optional[int] = Query(None)
+    page: Optional[int] = Query(None),
 ) -> DepartmentAssignationQueryParams:
     """
     Obtener los parámetros de consulta para empleados.
@@ -386,16 +413,44 @@ def get_department_assignation_query_params(
         Instancia de EmployeeQueryParams con los valores especificados.
     """
     return DepartmentAssignationQueryParams(
-        employee_id=employee_id,
-        department_id=department_id,
-        limit=limit,
-        page=page
+        employee_id=employee_id, department_id=department_id, limit=limit, page=page
     )
 
+
+def get_project_query_params(
+    company_id: Optional[str] = Query(None),
+    page: Optional[str] = Query(None),
+    limit: Optional[int] = Query(None),
+    order_by: Optional[int] = Query(None),
+) -> DepartmentAssignationQueryParams:
+    """
+    Obtener los parámetros de consulta para empleados.
+
+    Parámetros
+        ----------
+        company_id : str, opcional
+            El ID de la empresa.
+        page : int, opcional
+            Solicitar una página específica de resultados.
+        limit : int, opcional
+            Limitar el número de resultados.
+        order_by: str, opcional
+            "field1 asc, field2 desc"
+
+    Retorna
+    -------
+    ProjectQueryParams
+        Instancia de ProjectQueryParams con los valores especificados.
+    """
+    return ProjectQueryParams(
+        company_id=company_id, page=page, limit=limit, order_by=order_by
+    )
+
+
 # Rutas de la API utilizando el cliente de SesameAPI
-@sesame_router.get("/info",
-                   tags=["Sesame Info"],
-                   dependencies=[Depends(verify_secret_key)])
+@sesame_router.get(
+    "/info", tags=["Sesame Info"], dependencies=[Depends(verify_secret_key)]
+)
 async def get_info():
     """
     Obtener la información de la cuenta de Sesame.
@@ -408,11 +463,11 @@ async def get_info():
     return sesame_client.get_info().json()
 
 
-@sesame_router.get("/employees",
-                   tags=["Sesame Employees"],
-                   dependencies=[Depends(verify_secret_key)])
+@sesame_router.get(
+    "/employees", tags=["Sesame Employees"], dependencies=[Depends(verify_secret_key)]
+)
 async def get_employees(
-    query_params: EmployeeQueryParams = Depends(get_employee_query_params)
+    query_params: EmployeeQueryParams = Depends(get_employee_query_params),
 ):
     """
     Obtener una lista de empleados según los parámetros dados.
@@ -436,12 +491,13 @@ async def get_employees(
         limit=query_params.limit,
         page=query_params.page,
         order_by=query_params.order_by,
-        status=query_params.status
+        status=query_params.status,
     ).json()
 
-@sesame_router.get("/employees-csv",
-                   tags=["Sesame ETL"],
-                   dependencies=[Depends(verify_secret_key)])
+
+@sesame_router.get(
+    "/employees-csv", tags=["Sesame ETL"], dependencies=[Depends(verify_secret_key)]
+)
 async def get_employees_csv(
     query_params: EmployeeQueryParams = Depends(get_employee_query_params),
 ):
@@ -469,22 +525,24 @@ async def get_employees_csv(
         limit=query_params.limit,
         page=query_params.page,
         order_by=query_params.order_by,
-        status=query_params.status
+        status=query_params.status,
     )
 
     # Convertir el texto CSV a un stream y devolverlo como respuesta
     response = StreamingResponse(
         io.StringIO(csv_data),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=employees.csv"}
+        headers={"Content-Disposition": "attachment; filename=employees.csv"},
     )
 
     return response
 
 
-@sesame_router.get("/employees/{employee_id}",
-                   tags=["Sesame Employees"],
-                   dependencies=[Depends(verify_secret_key)])
+@sesame_router.get(
+    "/employees/{employee_id}",
+    tags=["Sesame Employees"],
+    dependencies=[Depends(verify_secret_key)],
+)
 async def get_employee_by_id(employee_id: str):
     """
     Obtener la información de un empleado por su ID.
@@ -502,11 +560,13 @@ async def get_employee_by_id(employee_id: str):
     return sesame_client.get_employee_by_id(employee_id).json()
 
 
-@sesame_router.get("/worked-hours",
-                   tags=["Sesame Statistics (Horas teóricas)"],
-                   dependencies=[Depends(verify_secret_key)])
+@sesame_router.get(
+    "/worked-hours",
+    tags=["Sesame Statistics (Horas teóricas)"],
+    dependencies=[Depends(verify_secret_key)],
+)
 async def get_worked_hours(
-    query_params: WorkedHoursQueryParams = Depends(get_worked_hours_query_params)
+    query_params: WorkedHoursQueryParams = Depends(get_worked_hours_query_params),
 ):
     """
     Obtener las horas trabajadas de empleados según los parámetros dados.
@@ -527,14 +587,15 @@ async def get_worked_hours(
         from_date=query_params.from_date,
         to_date=query_params.to_date,
         limit=query_params.limit,
-        page=query_params.page
+        page=query_params.page,
     ).json()
 
-@sesame_router.get("/worked-hours-csv",
-                   tags=["Sesame ETL"],
-                   dependencies=[Depends(verify_secret_key)])
+
+@sesame_router.get(
+    "/worked-hours-csv", tags=["Sesame ETL"], dependencies=[Depends(verify_secret_key)]
+)
 async def get_worked_hours_csv(
-    query_params: WorkedHoursQueryParams = Depends(get_worked_hours_query_params)
+    query_params: WorkedHoursQueryParams = Depends(get_worked_hours_query_params),
 ):
     """
     Obtener las horas trabajadas de empleados según los parámetros dados.
@@ -555,23 +616,26 @@ async def get_worked_hours_csv(
         from_date=query_params.from_date,
         to_date=query_params.to_date,
         limit=query_params.limit,
-        page=query_params.page
+        page=query_params.page,
     )
 
     # Convertir el texto CSV a un stream y devolverlo como respuesta
     response = StreamingResponse(
         io.StringIO(csv_data),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=worked-hours.csv"}
+        headers={"Content-Disposition": "attachment; filename=worked-hours.csv"},
     )
 
     return response
 
-@sesame_router.get("/work-entries",
-                   tags=["Sesame Work Entries (Fichajes)"],
-                   dependencies=[Depends(verify_secret_key)])
+
+@sesame_router.get(
+    "/work-entries",
+    tags=["Sesame Work Entries (Fichajes)"],
+    dependencies=[Depends(verify_secret_key)],
+)
 async def get_work_entries(
-    query_params: WorkEntriesQueryParams = Depends(get_work_entries_query_params)
+    query_params: WorkEntriesQueryParams = Depends(get_work_entries_query_params),
 ):
     """
     Obtener los fichajes de la compañía según los parámetros dados.
@@ -595,14 +659,15 @@ async def get_work_entries(
         only_return=query_params.only_return,
         limit=query_params.limit,
         page=query_params.page,
-        order_by=query_params.order_by
+        order_by=query_params.order_by,
     ).json()
 
-@sesame_router.get("/work-entries-csv",
-                   tags=["Sesame ETL"],
-                   dependencies=[Depends(verify_secret_key)])
+
+@sesame_router.get(
+    "/work-entries-csv", tags=["Sesame ETL"], dependencies=[Depends(verify_secret_key)]
+)
 async def get_work_entries_csv(
-    query_params: WorkEntriesQueryParams = Depends(get_work_entries_query_params)
+    query_params: WorkEntriesQueryParams = Depends(get_work_entries_query_params),
 ):
     """
     Obtener los fichajes de la compañía según los parámetros dados.
@@ -626,23 +691,26 @@ async def get_work_entries_csv(
         only_return=query_params.only_return,
         limit=query_params.limit,
         page=query_params.page,
-        order_by=query_params.order_by
+        order_by=query_params.order_by,
     )
 
     # Convertir el texto CSV a un stream y devolverlo como respuesta
     response = StreamingResponse(
         io.StringIO(csv_data),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=work-entries.csv"}
+        headers={"Content-Disposition": "attachment; filename=work-entries.csv"},
     )
 
     return response
 
-@sesame_router.get("/time-entries",
-                   tags=["Sesame Time Entries (Imputaciones)"],
-                   dependencies=[Depends(verify_secret_key)])
+
+@sesame_router.get(
+    "/time-entries",
+    tags=["Sesame Time Entries (Imputaciones)"],
+    dependencies=[Depends(verify_secret_key)],
+)
 async def get_time_entries(
-    query_params: TimeEntriesQueryParams = Depends(get_time_entries_query_params)
+    query_params: TimeEntriesQueryParams = Depends(get_time_entries_query_params),
 ):
     """
     Obtener las imputaciones de los empleados según los parámetros dados.
@@ -663,14 +731,15 @@ async def get_time_entries(
         to_date=query_params.to_date,
         employee_status=query_params.employee_status,
         limit=query_params.limit,
-        page=query_params.page
+        page=query_params.page,
     ).json()
-    
-@sesame_router.get("/time-entries-csv",
-                   tags=["Sesame ETL"],
-                   dependencies=[Depends(verify_secret_key)])
+
+
+@sesame_router.get(
+    "/time-entries-csv", tags=["Sesame ETL"], dependencies=[Depends(verify_secret_key)]
+)
 async def get_time_entries_csv(
-    query_params: TimeEntriesQueryParams = Depends(get_time_entries_query_params)
+    query_params: TimeEntriesQueryParams = Depends(get_time_entries_query_params),
 ):
     """
     Obtener las imputaciones de los empleados según los parámetros dados.
@@ -691,23 +760,28 @@ async def get_time_entries_csv(
         to_date=query_params.to_date,
         employee_status=query_params.employee_status,
         limit=query_params.limit,
-        page=query_params.page
+        page=query_params.page,
     )
 
     # Convertir el texto CSV a un stream y devolverlo como respuesta
     response = StreamingResponse(
         io.StringIO(csv_data),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=time-entries.csv"}
+        headers={"Content-Disposition": "attachment; filename=time-entries.csv"},
     )
 
     return response
 
-@sesame_router.get("/employee-department-assignations",
-                   tags=["Sesame Department Assignations"],
-                   dependencies=[Depends(verify_secret_key)])
+
+@sesame_router.get(
+    "/employee-department-assignations",
+    tags=["Sesame Department Assignations"],
+    dependencies=[Depends(verify_secret_key)],
+)
 async def get_employee_department_assignations(
-    query_params: DepartmentAssignationQueryParams = Depends(get_department_assignation_query_params)
+    query_params: DepartmentAssignationQueryParams = Depends(
+        get_department_assignation_query_params
+    ),
 ):
     """
     Obtener las imputaciones de los empleados según los parámetros dados.
@@ -721,19 +795,24 @@ async def get_employee_department_assignations(
     -------
     dict
         Las imputaciones en formato JSON.
-    """            
+    """
     return sesame_client.get_employee_department_assignations(
         employee_id=query_params.employee_id,
         department_id=query_params.department_id,
         limit=query_params.limit,
-        page=query_params.page
+        page=query_params.page,
     ).json()
 
-@sesame_router.get("/employee-department-assignations-csv",
-                   tags=["Sesame ETL"],
-                   dependencies=[Depends(verify_secret_key)])
+
+@sesame_router.get(
+    "/employee-department-assignations-csv",
+    tags=["Sesame ETL"],
+    dependencies=[Depends(verify_secret_key)],
+)
 async def get_employee_department_assignations(
-    query_params: DepartmentAssignationQueryParams = Depends(get_department_assignation_query_params)
+    query_params: DepartmentAssignationQueryParams = Depends(
+        get_department_assignation_query_params
+    ),
 ):
     """
     Obtener las imputaciones de los empleados según los parámetros dados.
@@ -752,14 +831,81 @@ async def get_employee_department_assignations(
         employee_id=query_params.employee_id,
         department_id=query_params.department_id,
         limit=query_params.limit,
-        page=query_params.page
+        page=query_params.page,
     )
 
     # Convertir el texto CSV a un stream y devolverlo como respuesta
     response = StreamingResponse(
         io.StringIO(csv_data),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=department_assignations.csv"}
+        headers={
+            "Content-Disposition": "attachment; filename=department_assignations.csv"
+        },
+    )
+
+    return response
+
+
+@sesame_router.get(
+    "/projects", tags=["Sesame Projects"], dependencies=[Depends(verify_secret_key)]
+)
+async def get_projets(
+    query_params: ProjectQueryParams = Depends(get_project_query_params),
+):
+    """
+    Obtener Los projectos
+
+    Parámetros
+    ----------
+    query_params : ProjectQueryParams
+        Parámetros de búsqueda de proyectos
+
+    Retorna
+    -------
+    dict
+        Los proyectos en formato JSON.
+    """
+    return sesame_client.get_projects(
+        company_id=query_params.company_id,
+        page=query_params.page,
+        limit=query_params.limit,
+        order_by=query_params.order_by,
+    ).json()
+
+
+@sesame_router.get(
+    "/projects-csv",
+    tags=["Sesame ETL"],
+    dependencies=[Depends(verify_secret_key)],
+)
+async def get_projets_csv(
+    query_params: ProjectQueryParams = Depends(get_project_query_params),
+):
+    """
+    Obtener Los projectos
+
+    Parámetros
+    ----------
+    query_params : ProjectQueryParams
+        Parámetros de búsqueda de proyectos
+
+    Retorna
+    -------
+    text
+        Los proyectos en formato csv.
+    """
+    csv_data = sesame_client.get_projects_csv(
+        company_id=query_params.company_id,
+        page=query_params.page,
+        limit=query_params.limit,
+        order_by=query_params.order_by,
+    )
+
+    # Convertir el texto CSV a un stream y devolverlo como respuesta
+    response = StreamingResponse(
+        io.StringIO(csv_data),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=projects.csv"},
     )
 
     return response
