@@ -268,6 +268,21 @@ class SesameAPIClient:
         response = requests.post(url, json=body, headers=self.headers)
         return response
 
+    def delete_employee(
+        self,
+        id,
+    ):
+        """Borrar employee por su id
+
+        Parameters
+        ----------
+        id : str
+            id del empleado en sesame
+        """
+        url = f"{self.base_url}/core/v3/employees/{id}"
+        response = requests.delete(url, headers=self.headers)
+        return response
+
     def get_employees_csv(
         self,
         code=None,
