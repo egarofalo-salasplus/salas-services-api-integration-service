@@ -4,6 +4,7 @@
 import os
 from io import StringIO
 import requests
+import time
 import pandas as pd
 from clients.sesame_client import SesameAPIClient
 from decouple import config
@@ -14,14 +15,60 @@ from sqlalchemy import create_engine, text, inspect
 sesame_client = SesameAPIClient()
 
 
-def etl_departments():
+def etl_worked_hours(from_date: str, to_date: str):
     # EXTRACCIÓN
-    # Datos de empleados desde SESAME
-    response = sesame_client.get_departments_csv()
-    data = StringIO(response)
-    df_departments = pd.read_csv(data)
 
-    logging.info(f"Datos de obtenidos de SESAME - Dimensión: '{df_departments.shape}'")
+    # Datos de horas teóricas desde SESAME
+    # Generar un rango de fechas
+    date_range = pd.date_range(start=from_date, end=to_date)
+
+    # Inicializar una lista para almacenar los DataFrames
+    dataframes = []
+
+    logging.info("Inicia carga de datos de horas teóricas")
+    # Iterar sobre cada día en el rango de fechas
+    for i, single_date in enumerate(date_range):
+        # Formatear la fecha al formato requerido por el endpoint
+        day_str = single_date.strftime("%Y-%m-%d")
+
+        # Llamar al endpoint y obtener el DataFrame para esa fecha
+        if i % 20 == 0:
+            time.sleep(30)
+        csv_data = sesame_client.get_worked_hours_csv(
+            from_date=day_str, to_date=day_str
+        )
+        if csv_data:
+            data = StringIO(csv_data)
+            df_daily = pd.read_csv(data)
+        else:
+            logging.error(f"ERROR: Error en la carga de las horas teóricas.")
+            result = {
+                "status": "error",
+                "status-code": 400,
+                "message": "Error en la carga de las horas teóricas.",
+            }
+            return result
+
+        logging.info(
+            f"Carga de datos horas teóricas - Progreso {(i + 1)/date_range.shape[0]*100:.2f}% - {day_str}"
+        )
+
+        df_daily["date"] = day_str
+
+        # Agregar el DataFrame a la lista si no está vacío
+        if not df_daily.empty:
+            dataframes.append(df_daily)
+
+    # Concatenar todos los DataFrames en uno solo
+    df_worked_hours = pd.concat(dataframes, ignore_index=True)
+
+    df_worked_hours = (
+        df_worked_hours.groupby(["employeeId", "date"])
+        .agg({"secondsWorked": "sum", "secondsToWork": "sum", "secondsBalance": "sum"})
+        .reset_index()
+    )
+
+    logging.info(f"Datos de obtenidos de SESAME - Dimensión: '{df_worked_hours.shape}'")
 
     # Conexión con base de datos SQL Server (Data Warehouse Salas)
     server = config("DB_SERVER", default=os.getenv("DB_SERVER"))
@@ -33,34 +80,32 @@ def etl_departments():
     connection_string = f"mssql+pyodbc://{username}:{password}@{server}/{database}?driver=ODBC+Driver+17+for+SQL+Server"
     engine = create_engine(connection_string)
 
-    # Consulta SQL para obtener todos los registros de la tabla
-    query = "SELECT * FROM dbo.Dim_Department"
-
-    # Leer los datos en un DataFrame de pandas
-    with engine.connect() as connection:
-        df_deparment_db = pd.read_sql(query, connection)
-
-    logging.info(f"Datos cargados desde Data Warehouse")
+    logging.info("Creada conexión con base de datos")
 
     # TRANSFORMACIÓN
-    logging.info(f"Inicia proceso de transformación de datos")
+    logging.info("Inicia proceso de transformación de datos")
 
     # Crear DataFrame vacio para albergar las transformaciones
     df = pd.DataFrame()
 
     # Comenzar a relacionar columnas
-    df["department_sesame_id"] = df_departments["id"]
-    df["department_name"] = df_departments["name"]
+    df["employee_sesame_id"] = df_worked_hours["employeeId"]
+    df["date"] = df_worked_hours["date"]
+    df["worked_time"] = pd.to_timedelta(
+        df_worked_hours["secondsWorked"].astype(int), unit="s"
+    )
+    df["to_work_time"] = pd.to_timedelta(
+        df_worked_hours["secondsToWork"].astype(int), unit="s"
+    )
 
-    logging.info(f"Columnas ordenadas.")
+    logging.info("Columnas ordenadas.")
 
     # CARGA
     # Inicializar o actualizar tabla Dim_Empleado
     schema = "dbo"
-    table_name = "Dim_Department"
+    table_name = "Fact_Worked_Hours"
     table_complete_name = schema + "." + table_name
     table_df = df.copy()
-    index_field = "department_sesame_id"
 
     with engine.connect() as connection:
         # Crear la tabla si no existe
@@ -84,8 +129,8 @@ def etl_departments():
 
             # Identificar registros que son nuevos
             df_table_new = table_df[
-                ~table_df.set_index([index_field]).index.isin(
-                    df_table_existing.set_index([index_field]).index
+                ~table_df.set_index(["employee_sesame_id", "date"]).index.isin(
+                    df_table_existing.set_index(["employee_sesame_id", "date"]).index
                 )
             ]
 
@@ -106,8 +151,8 @@ def etl_departments():
 
             # Identificar registros existentes para actualizar
             df_table_existing_to_update = table_df[
-                table_df.set_index([index_field]).index.isin(
-                    df_table_existing.set_index([index_field]).index
+                table_df.set_index(["employee_sesame_id", "date"]).index.isin(
+                    df_table_existing.set_index(["employee_sesame_id", "date"]).index
                 )
             ]
 
@@ -116,7 +161,8 @@ def etl_departments():
                 for _, row in df_table_existing_to_update.iterrows():
                     # Crear un diccionario de los valores actuales en la base de datos
                     current_row = df_table_existing[
-                        df_table_existing[index_field] == row[index_field]
+                        df_table_existing["employee_sesame_id", "date"]
+                        == row["employee_sesame_id", "date"]
                     ].iloc[0]
 
                     # Crear un diccionario con los valores a actualizar
@@ -130,24 +176,28 @@ def etl_departments():
                         current_row[col] != row[col]
                         for col in table_df.columns
                         if col in current_row
-                        and col != index_field  # Excluir columnas de claves primarias
+                        and col
+                        not in [
+                            "employee_sesame_id",
+                            "date",
+                        ]  # Excluir columnas de claves primarias
                     )
 
                     # Solo actualizar si hay cambios
                     if has_changed:
                         update_query = f"""
                         UPDATE {table_complete_name}
-                        SET {", ".join([f"{col} = :{col}" for col in table_df.columns if col not in [index_field]])}
-                        WHERE {index_field} = :{index_field}
+                        SET {", ".join([f"{col} = :{col}" for col in table_df.columns if col not in ["employee_sesame_id", "date"]])}
+                        WHERE {"employee_sesame_id", "date"} = :{"employee_sesame_id", "date"}
                         """
 
                         logging.info(
-                            f"Revisando actualizaciones en {index_field}: {row[index_field]}"
+                            f"Revisando actualizaciones en {"employee_sesame_id", "date"}: {row["employee_sesame_id", "date"]}"
                         )
                         connection.execute(text(update_query), params)
                     else:
                         logging.info(
-                            f"No hay cambios para {index_field}: {row[index_field]}"
+                            f"No hay cambios para {"employee_sesame_id", "date"}: {row["employee_sesame_id", "date"]}"
                         )
 
                 logging.info("Registros existentes actualizados con éxito.")

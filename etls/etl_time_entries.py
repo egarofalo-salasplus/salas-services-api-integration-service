@@ -14,14 +14,14 @@ from sqlalchemy import create_engine, text, inspect
 sesame_client = SesameAPIClient()
 
 
-def etl_departments():
+def etl_time_entries(from_date: str, to_date: str):
     # EXTRACCIÓN
-    # Datos de empleados desde SESAME
-    response = sesame_client.get_departments_csv()
+    # Datos de departamentos desde SESAME
+    response = sesame_client.get_time_entries_csv(from_date=from_date, to_date=to_date)
     data = StringIO(response)
-    df_departments = pd.read_csv(data)
+    df_time_entries = pd.read_csv(data)
 
-    logging.info(f"Datos de obtenidos de SESAME - Dimensión: '{df_departments.shape}'")
+    logging.info(f"Datos de obtenidos de SESAME - Dimensión: '{df_time_entries.shape}'")
 
     # Conexión con base de datos SQL Server (Data Warehouse Salas)
     server = config("DB_SERVER", default=os.getenv("DB_SERVER"))
@@ -33,34 +33,32 @@ def etl_departments():
     connection_string = f"mssql+pyodbc://{username}:{password}@{server}/{database}?driver=ODBC+Driver+17+for+SQL+Server"
     engine = create_engine(connection_string)
 
-    # Consulta SQL para obtener todos los registros de la tabla
-    query = "SELECT * FROM dbo.Dim_Department"
-
-    # Leer los datos en un DataFrame de pandas
-    with engine.connect() as connection:
-        df_deparment_db = pd.read_sql(query, connection)
-
-    logging.info(f"Datos cargados desde Data Warehouse")
+    logging.info("Creada conexión con base de datos")
 
     # TRANSFORMACIÓN
-    logging.info(f"Inicia proceso de transformación de datos")
+    logging.info("Inicia proceso de transformación de datos")
 
     # Crear DataFrame vacio para albergar las transformaciones
     df = pd.DataFrame()
 
     # Comenzar a relacionar columnas
-    df["department_sesame_id"] = df_departments["id"]
-    df["department_name"] = df_departments["name"]
+    df["time_entry_sesame_id"] = df_time_entries["id"]
+    df["project_sesame_id"] = df_time_entries["project_id"]
+    df["time_entry_in"] = pd.to_datetime(df_time_entries["time_entry_in_datetime"])
+    df["time_entry_out"] = pd.to_datetime(df_time_entries["time_entry_out_datetime"])
+    df["tags"] = df_time_entries["tags"]
+    df["comment"] = df_time_entries["comment"].str[:200]
+    df["employee_sesame_id"] = df_time_entries["employee_id"]
 
-    logging.info(f"Columnas ordenadas.")
+    logging.info("Columnas ordenadas.")
 
     # CARGA
     # Inicializar o actualizar tabla Dim_Empleado
     schema = "dbo"
-    table_name = "Dim_Department"
+    table_name = "Fact_Time_Entry"
     table_complete_name = schema + "." + table_name
     table_df = df.copy()
-    index_field = "department_sesame_id"
+    index_field = "time_entry_sesame_id"
 
     with engine.connect() as connection:
         # Crear la tabla si no existe

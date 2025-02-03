@@ -14,6 +14,9 @@ from etls.etl_imputations import (
 from etls.etl_employees import etl_employees
 from etls.etl_projects import etl_projects
 from etls.etl_departments import etl_departments
+from etls.etl_department_assignation import etl_department_assignations
+from etls.etl_time_entries import etl_time_entries
+from etls.etl_worked_hours import etl_worked_hours
 from pydantic import BaseModel
 from typing import Dict
 import asyncio
@@ -28,6 +31,62 @@ class TaskResponse(BaseModel):
     task_id: str
     status: str
     message: str
+
+
+@etl_router.get(
+    "/run-etl-worked-hours",
+    tags=["ETL Process"],
+    dependencies=[Depends(verify_secret_key)],
+)
+async def run_etl_worked_hours(
+    from_date: str = Query(..., description="Fecha de inicio en formato YYYY-MM-DD"),
+    to_date: str = Query(..., description="Fecha de fin en formato YYYY-MM-DD"),
+):
+    """endpoint para ejectuar proceso ETL de horas fichadas desde Sesame HR
+    hacia Data Warehouse
+
+    from_date : str
+        Fecha de inicio, by default
+        Query(..., description="Fecha de inicio en formato YYYY-MM-DD")
+    to_date : str, optional
+        _description_, by default
+        Query(..., description="Fecha de fin en formato YYYY-MM-DD")
+
+    Returns
+    -------
+
+    """
+    # Ejecutar función ELT
+    logging.info("Inicio de ETL para imputaciones desde SESAME.")
+    etl_worked_hours(from_date, to_date)
+
+
+@etl_router.get(
+    "/run-etl-time-entries",
+    tags=["ETL Process"],
+    dependencies=[Depends(verify_secret_key)],
+)
+async def run_etl_time_entries(
+    from_date: str = Query(..., description="Fecha de inicio en formato YYYY-MM-DD"),
+    to_date: str = Query(..., description="Fecha de fin en formato YYYY-MM-DD"),
+):
+    """endpoint para ejectuar proceso ETL de imputaciones desde Sesame HR
+    hacia Data Warehouse
+
+    from_date : str
+        Fecha de inicio, by default
+        Query(..., description="Fecha de inicio en formato YYYY-MM-DD")
+    to_date : str, optional
+        _description_, by default
+        Query(..., description="Fecha de fin en formato YYYY-MM-DD")
+
+    Returns
+    -------
+
+    """
+    # Ejecutar función ELT
+    logging.info("Inicio de ETL para imputaciones desde SESAME.")
+    etl_time_entries(from_date, to_date)
 
 
 @etl_router.get(
@@ -49,6 +108,27 @@ async def run_etl_departments():
     # Ejecutar función ELT
     logging.info("Inicio de ETL para departamentos desde SESAME.")
     etl_departments()
+
+
+@etl_router.get(
+    "/run-etl-department-assignation",
+    tags=["ETL Process"],
+    dependencies=[Depends(verify_secret_key)],
+)
+async def run_etl_department_assignations():
+    """endpoint para ejectuar proceso ETL de asignación de departamentos
+    desde Sesame HR hacia Data Warehouse
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
+    # Ejecutar función ELT
+    logging.info("Inicio de ETL para asignación de departamentos desde SESAME.")
+    etl_department_assignations()
 
 
 @etl_router.get(
@@ -77,7 +157,7 @@ async def run_etl_projects():
     tags=["ETL Process"],
     dependencies=[Depends(verify_secret_key)],
 )
-async def run_etl_imputations():
+async def run_etl_employees():
     """endpoint para ejectuar proces ETL empleados desde Sesame HR
     hacia Data Warehouse
 

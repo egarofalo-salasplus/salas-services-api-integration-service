@@ -467,6 +467,14 @@ class SesameAPIClient:
                         ),
                         None,
                     ),
+                    "cf_fecha_de_baja": next(
+                        (
+                            cf["value"]
+                            for cf in record.get("customFields", [])
+                            if cf["slug"] == "cf_fecha_de_baja"
+                        ),
+                        None,
+                    ),
                     "status": record.get("status"),
                     "children": record.get("children"),
                     "disability": record.get("disability"),
@@ -1031,14 +1039,14 @@ class SesameAPIClient:
 
                 project = ""
                 if record.get("project") is None:
-                    project = "No especificado"
+                    project = ""
                 else:
-                    project = record.get("project")["name"]
+                    project = record.get("project")["id"]
 
                 flat_record = {
                     "id": record.get("id"),
                     "employee_id": record.get("employee")["id"],
-                    "project": project,
+                    "project_id": project,
                     "time_entry_in_datetime": record.get("timeEntryIn")["date"],
                     "time_entry_out_datetime": record.get("timeEntryOut")["date"],
                     "tags": tags,

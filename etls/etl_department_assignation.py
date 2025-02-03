@@ -14,14 +14,16 @@ from sqlalchemy import create_engine, text, inspect
 sesame_client = SesameAPIClient()
 
 
-def etl_departments():
+def etl_department_assignations():
     # EXTRACCIÓN
-    # Datos de empleados desde SESAME
-    response = sesame_client.get_departments_csv()
+    # Datos de departamentos desde SESAME
+    response = sesame_client.get_employee_department_assignations_csv()
     data = StringIO(response)
-    df_departments = pd.read_csv(data)
+    df_department_assignations = pd.read_csv(data)
 
-    logging.info(f"Datos de obtenidos de SESAME - Dimensión: '{df_departments.shape}'")
+    logging.info(
+        f"Datos de obtenidos de SESAME - Dimensión: '{df_department_assignations.shape}'"
+    )
 
     # Conexión con base de datos SQL Server (Data Warehouse Salas)
     server = config("DB_SERVER", default=os.getenv("DB_SERVER"))
@@ -33,34 +35,30 @@ def etl_departments():
     connection_string = f"mssql+pyodbc://{username}:{password}@{server}/{database}?driver=ODBC+Driver+17+for+SQL+Server"
     engine = create_engine(connection_string)
 
-    # Consulta SQL para obtener todos los registros de la tabla
-    query = "SELECT * FROM dbo.Dim_Department"
-
-    # Leer los datos en un DataFrame de pandas
-    with engine.connect() as connection:
-        df_deparment_db = pd.read_sql(query, connection)
-
-    logging.info(f"Datos cargados desde Data Warehouse")
+    logging.info("Creada conexión con base de datos")
 
     # TRANSFORMACIÓN
-    logging.info(f"Inicia proceso de transformación de datos")
+    logging.info("Inicia proceso de transformación de datos")
 
     # Crear DataFrame vacio para albergar las transformaciones
     df = pd.DataFrame()
 
     # Comenzar a relacionar columnas
-    df["department_sesame_id"] = df_departments["id"]
-    df["department_name"] = df_departments["name"]
+    df["department_assignation_sesame_id"] = df_department_assignations["id"]
+    df["employee_sesame_id"] = df_department_assignations["employee_id"]
+    df["department_sesame_id"] = df_department_assignations["department_id"]
+    df["creation_date"] = df_department_assignations["created_at"]
+    df["update_date"] = df_department_assignations["updated_at"]
 
     logging.info(f"Columnas ordenadas.")
 
     # CARGA
     # Inicializar o actualizar tabla Dim_Empleado
     schema = "dbo"
-    table_name = "Dim_Department"
+    table_name = "Fact_Department_Assignation"
     table_complete_name = schema + "." + table_name
     table_df = df.copy()
-    index_field = "department_sesame_id"
+    index_field = "department_assignation_sesame_id"
 
     with engine.connect() as connection:
         # Crear la tabla si no existe
