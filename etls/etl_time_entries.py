@@ -5,16 +5,40 @@ import os
 from io import StringIO
 import requests
 import pandas as pd
+from fastapi import HTTPException
 from clients.sesame_client import SesameAPIClient
 from decouple import config
 import logging
 from sqlalchemy import create_engine, text, inspect
+import asyncio
+from typing import Dict
 
 # Inicializamos el cliente de SesameAPI
 sesame_client = SesameAPIClient()
 
+# Usa un diccionario seguro con bloqueo
+tasks_status_lock = asyncio.Lock()
+tasks_status: Dict[str, Dict] = {}
 
-def etl_time_entries(from_date: str, to_date: str):
+
+async def update_task_status(task_id: str, status: str, message: str):
+    """Actualiza el estado de una tarea con un bloqueo."""
+    logging.info(f"Updating task {task_id} to status {status} with message '{message}'")
+    tasks_status[task_id] = {
+        "status": status,
+        "message": message,
+    }
+
+
+async def get_task_status(task_id: str):
+    """Obtiene el estado de una tarea con un bloqueo."""
+    logging.info(f"Getting task {task_id}")
+    if task_id not in tasks_status:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return tasks_status[task_id]
+
+
+async def etl_time_entries(task_id: str, from_date: str, to_date: str):
     # EXTRACCIÓN
     # Datos de departamentos desde SESAME
     response = sesame_client.get_time_entries_csv(from_date=from_date, to_date=to_date)
@@ -22,6 +46,10 @@ def etl_time_entries(from_date: str, to_date: str):
     df_time_entries = pd.read_csv(data)
 
     logging.info(f"Datos de obtenidos de SESAME - Dimensión: '{df_time_entries.shape}'")
+
+    # Almacena el estado de la tarea
+    await update_task_status(task_id, "in_progress", "datos obtenidos")
+    await asyncio.sleep(1)
 
     # Conexión con base de datos SQL Server (Data Warehouse Salas)
     server = config("DB_SERVER", default=os.getenv("DB_SERVER"))
@@ -142,6 +170,12 @@ def etl_time_entries(from_date: str, to_date: str):
                         logging.info(
                             f"Revisando actualizaciones en {index_field}: {row[index_field]}"
                         )
+                        await update_task_status(
+                            task_id,
+                            "in_progress",
+                            f"Revisando actualizaciones en {index_field}: {row[index_field]}",
+                        )
+                        await asyncio.sleep(0.1)
                         connection.execute(text(update_query), params)
                     else:
                         logging.info(
@@ -153,3 +187,9 @@ def etl_time_entries(from_date: str, to_date: str):
                 logging.info(
                     f"No se encontraron registros existentes para actualizar en la tabla {table_name}."
                 )
+
+    # Actualiza el estado de la tarea al finalizar
+    tasks_status[task_id] = {
+        "status": "completed",
+        "message": "ETL process completed successfully",
+    }

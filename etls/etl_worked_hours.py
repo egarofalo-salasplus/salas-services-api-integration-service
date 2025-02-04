@@ -6,16 +6,44 @@ from io import StringIO
 import requests
 import time
 import pandas as pd
+from fastapi import HTTPException
 from clients.sesame_client import SesameAPIClient
 from decouple import config
 import logging
 from sqlalchemy import create_engine, text, inspect
+import asyncio
+from typing import Dict
+
+# Inicializamos el cliente de SesameAPI
+sesame_client = SesameAPIClient()
+
+# Usa un diccionario seguro con bloqueo
+tasks_status_lock = asyncio.Lock()
+tasks_status: Dict[str, Dict] = {}
+
+
+async def update_task_status(task_id: str, status: str, message: str):
+    """Actualiza el estado de una tarea con un bloqueo."""
+    logging.info(f"Updating task {task_id} to status {status} with message '{message}'")
+    tasks_status[task_id] = {
+        "status": status,
+        "message": message,
+    }
+
+
+async def get_task_status(task_id: str):
+    """Obtiene el estado de una tarea con un bloqueo."""
+    logging.info(f"Getting task {task_id}")
+    if task_id not in tasks_status:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return tasks_status[task_id]
+
 
 # Inicializamos el cliente de SesameAPI
 sesame_client = SesameAPIClient()
 
 
-def etl_worked_hours(from_date: str, to_date: str):
+async def etl_worked_hours(task_id: str, from_date: str, to_date: str):
     # EXTRACCIÓN
 
     # Datos de horas teóricas desde SESAME
@@ -194,6 +222,12 @@ def etl_worked_hours(from_date: str, to_date: str):
                         logging.info(
                             f"Revisando actualizaciones en {"employee_sesame_id", "date"}: {row["employee_sesame_id", "date"]}"
                         )
+                        await update_task_status(
+                            task_id,
+                            "in_progress",
+                            f"Revisando actualizaciones en {"employee_sesame_id", "date"}: {row["employee_sesame_id", "date"]}",
+                        )
+                        await asyncio.sleep(0.1)
                         connection.execute(text(update_query), params)
                     else:
                         logging.info(
