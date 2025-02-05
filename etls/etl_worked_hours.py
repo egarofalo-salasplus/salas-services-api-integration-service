@@ -80,6 +80,13 @@ async def etl_worked_hours(task_id: str, from_date: str, to_date: str):
         logging.info(
             f"Carga de datos horas teóricas - Progreso {(i + 1)/date_range.shape[0]*100:.2f}% - {day_str}"
         )
+        await update_task_status(
+            task_id,
+            "in_progress",
+            f"Carga de datos horas teóricas - Progreso {(i + 1)/date_range.shape[0]*100:.2f}% - {day_str}",
+        )
+
+        await asyncio.sleep(0.1)
 
         df_daily["date"] = day_str
 
@@ -97,6 +104,10 @@ async def etl_worked_hours(task_id: str, from_date: str, to_date: str):
     )
 
     logging.info(f"Datos de obtenidos de SESAME - Dimensión: '{df_worked_hours.shape}'")
+
+    # Almacena el estado de la tarea
+    await update_task_status(task_id, "in_progress", "datos obtenidos")
+    await asyncio.sleep(1)
 
     # Conexión con base de datos SQL Server (Data Warehouse Salas)
     server = config("DB_SERVER", default=os.getenv("DB_SERVER"))
@@ -239,3 +250,19 @@ async def etl_worked_hours(task_id: str, from_date: str, to_date: str):
                 logging.info(
                     f"No se encontraron registros existentes para actualizar en la tabla {table_name}."
                 )
+
+    result = {
+        "status": "success",
+        "status-code": 200,
+        "message": "ETL de imputaciones y fichajes ejecutado con éxito.",
+    }
+
+    # Actualiza el estado de la tarea al finalizar
+    await update_task_status(
+        task_id,
+        "comleted",
+        "ETL process completed successfully",
+    )
+    await asyncio.sleep(0.1)
+
+    return result

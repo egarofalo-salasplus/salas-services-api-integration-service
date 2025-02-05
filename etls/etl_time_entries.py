@@ -188,8 +188,16 @@ async def etl_time_entries(task_id: str, from_date: str, to_date: str):
                     f"No se encontraron registros existentes para actualizar en la tabla {table_name}."
                 )
 
+    result = {
+        "status": "success",
+        "status-code": 200,
+        "message": "ETL de imputaciones y fichajes ejecutado con éxito.",
+    }
+
     # Actualiza el estado de la tarea al finalizar
     tasks_status[task_id] = {
         "status": "completed",
         "message": "ETL process completed successfully",
     }
+
+    return result
