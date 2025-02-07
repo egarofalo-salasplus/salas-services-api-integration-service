@@ -12,6 +12,8 @@ from etls import etl_departments
 from etls import etl_department_assignation
 from etls import etl_time_entries
 from etls import etl_worked_hours
+from etls import etl_dm_imputations
+from etls import etl_dm_worked_hours
 from pydantic import BaseModel
 from typing import Dict
 import asyncio
@@ -37,6 +39,89 @@ def validate_date_format(date_str: str):
             status_code=400,
             detail=f"Formato de fecha incorrecto: {date_str}. Use YYYY-MM-DD.",
         )
+
+
+@etl_router.get(
+    "/run-etl-dm-worked-hours",
+    tags=["Datamarts Process"],
+    dependencies=[Depends(verify_secret_key)],
+)
+async def run_etl_dm_worked_hours(
+    from_date: str = Query(..., description="Fecha de inicio en formato YYYY-MM-DD"),
+    to_date: str = Query(..., description="Fecha de fin en formato YYYY-MM-DD"),
+):
+    """endpoint para ejectuar proceso ETL de fichajes hacia Datamart
+
+    from_date : str
+        Fecha de inicio, by default
+        Query(..., description="Fecha de inicio en formato YYYY-MM-DD")
+    to_date : str, optional
+        _description_, by default
+        Query(..., description="Fecha de fin en formato YYYY-MM-DD")
+
+    Returns
+    -------
+        JSONResponse
+
+    """
+    # Ejecutar función ELT
+    logging.info("Inicio de ETL para data mart de fichajes.")
+
+    # Validación del formato de las fechas
+    from_date_parsed = validate_date_format(from_date)
+    to_date_parsed = validate_date_format(to_date)
+
+    # Validación del rango de fechas
+    if from_date_parsed > to_date_parsed:
+        raise HTTPException(
+            status_code=400, detail="from_date debe ser anterior a to_date"
+        )
+
+    response = etl_dm_worked_hours.etl_dm_worked_hours(from_date, to_date)
+
+    return response
+
+
+@etl_router.get(
+    "/run-etl-dm-imputations",
+    tags=["Datamarts Process"],
+    dependencies=[Depends(verify_secret_key)],
+)
+async def run_etl_dm_imputations(
+    from_date: str = Query(..., description="Fecha de inicio en formato YYYY-MM-DD"),
+    to_date: str = Query(..., description="Fecha de fin en formato YYYY-MM-DD"),
+):
+    """endpoint para ejectuar proceso ETL de imputaciones desde Sesame HR
+    hacia Data Warehouse
+
+    from_date : str
+        Fecha de inicio, by default
+        Query(..., description="Fecha de inicio en formato YYYY-MM-DD")
+    to_date : str, optional
+        _description_, by default
+        Query(..., description="Fecha de fin en formato YYYY-MM-DD")
+
+    Returns
+    -------
+        JSONResponse
+
+    """
+    # Ejecutar función ELT
+    logging.info("Inicio de ETL para data mart de imputaciones.")
+
+    # Validación del formato de las fechas
+    from_date_parsed = validate_date_format(from_date)
+    to_date_parsed = validate_date_format(to_date)
+
+    # Validación del rango de fechas
+    if from_date_parsed > to_date_parsed:
+        raise HTTPException(
+            status_code=400, detail="from_date debe ser anterior a to_date"
+        )
+
+    response = etl_dm_imputations.etl_dm_imputations(from_date, to_date)
+
+    return response
 
 
 @etl_router.get(
