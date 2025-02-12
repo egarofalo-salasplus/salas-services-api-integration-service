@@ -5,13 +5,37 @@ from fastapi.responses import JSONResponse
 import pandas as pd
 from clients.sesame_client import SesameAPIClient
 import logging
+from fastapi import HTTPException
 from sqlalchemy import create_engine, text, inspect
+import asyncio
+from typing import Dict
 
 # Inicializamos el cliente de SesameAPI
 sesame_client = SesameAPIClient()
 
+# Usa un diccionario seguro con bloqueo
+tasks_status_lock = asyncio.Lock()
+tasks_status: Dict[str, Dict] = {}
 
-def etl_dm_worked_hours(from_date: str, to_date: str):
+
+async def update_task_status(task_id: str, status: str, message: str):
+    """Actualiza el estado de una tarea con un bloqueo."""
+    logging.info(f"Updating task {task_id} to status {status} with message '{message}'")
+    tasks_status[task_id] = {
+        "status": status,
+        "message": message,
+    }
+
+
+async def get_task_status(task_id: str):
+    """Obtiene el estado de una tarea con un bloqueo."""
+    logging.info(f"Getting task {task_id}")
+    if task_id not in tasks_status:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return tasks_status[task_id]
+
+
+async def etl_dm_worked_hours(task_id: str, from_date: str, to_date: str):
     try:
         # Conexión con Base de Datos SQL Server
         # Información de conexión a SQL Server
@@ -52,6 +76,12 @@ def etl_dm_worked_hours(from_date: str, to_date: str):
         df = pd.DataFrame()
         logging.info("Comienza transformación de datos.")
 
+        # Almacena el estado de la tarea
+        await update_task_status(
+            task_id, "in_progress", "Comienza la transformación de datos"
+        )
+        await asyncio.sleep(1)
+
         # Tomar datos de tabla de horas trabajadas
         df["worked_hours_id"] = df_worked_hours_db["worked_hours_id"]
         df["employee_sesame_id"] = df_worked_hours_db["employee_sesame_id"]
@@ -89,6 +119,12 @@ def etl_dm_worked_hours(from_date: str, to_date: str):
         )
         logging.info("Columnas reordenadas y renombradas.")
 
+        # Almacena el estado de la tarea
+        await update_task_status(
+            task_id, "in_progress", "Columnas ordenadas y renombradas"
+        )
+        await asyncio.sleep(1)
+
         # Carga
         # Conexión con Base de Datos de Datamart Hub SQL Server
         # Información de conexión a SQL Server
@@ -110,6 +146,10 @@ def etl_dm_worked_hours(from_date: str, to_date: str):
         index_field = "fichaje_diario_id"
         logging.info("Inicia carga a base de datos.")
 
+        # Almacena el estado de la tarea
+        await update_task_status(task_id, "in_progress", "Inicia la carga a base datos")
+        await asyncio.sleep(1)
+
         with engine.connect() as connection:
             # Crear la tabla si no existe
             if not inspect(engine).has_table(table_name, schema=schema):
@@ -122,8 +162,18 @@ def etl_dm_worked_hours(from_date: str, to_date: str):
                     index=False,
                 )
                 logging.info("Datos introducidos con éxito.")
+                # Almacena el estado de la tarea
+                await update_task_status(
+                    task_id, "in_progress", "Datos introducidos con éxito"
+                )
+                await asyncio.sleep(1)
             else:
                 logging.info(f"La tabla {table_name} ya existe.")
+                # Almacena el estado de la tarea
+                await update_task_status(
+                    task_id, "in_progress", f"La tabla {table_name} ya existe"
+                )
+                await asyncio.sleep(1)
                 # Leer la tabla existente
                 df_table_existing = pd.read_sql(
                     f"SELECT * FROM {table_complete_name}", connection
@@ -147,10 +197,22 @@ def etl_dm_worked_hours(from_date: str, to_date: str):
                         if_exists="append",
                     )
                     logging.info("Datos nuevos introducidos con éxito.")
+                    # Almacena el estado de la tarea
+                    await update_task_status(
+                        task_id, "in_progress", "Datos nuevos introducidos con éxito"
+                    )
+                    await asyncio.sleep(1)
                 else:
                     logging.info(
                         f"La tabla {table_name} ya está actualizada. No se agregaron registros nuevos."
                     )
+                    # Almacena el estado de la tarea
+                    await update_task_status(
+                        task_id,
+                        "in_progress",
+                        f"La tabla {table_name} ya está actualizada. No se agregaron registros nuevos.",
+                    )
+                    await asyncio.sleep(1)
 
                 # Identificar registros existentes para actualizar
                 df_table_existing_to_update = table_df[
@@ -193,17 +255,58 @@ def etl_dm_worked_hours(from_date: str, to_date: str):
                             logging.info(
                                 f"Revisando actualizaciones en {index_field}: {row[index_field]}"
                             )
+                            # Almacena el estado de la tarea
+                            await update_task_status(
+                                task_id,
+                                "in_progress",
+                                f"Revisando actualizaciones en {index_field}: {row[index_field]}",
+                            )
+                            await asyncio.sleep(1)
                             connection.execute(text(update_query), params)
                         else:
                             logging.info(
                                 f"No hay cambios para {index_field}: {row[index_field]}"
                             )
+                            # Almacena el estado de la tarea
+                            await update_task_status(
+                                task_id,
+                                "in_progress",
+                                f"No hay cambios para {index_field}: {row[index_field]}",
+                            )
+                            await asyncio.sleep(1)
 
                     logging.info("Registros existentes actualizados con éxito.")
+                    # Almacena el estado de la tarea
+                    await update_task_status(
+                        task_id,
+                        "in_progress",
+                        "Registros existentes actualizados con éxito.",
+                    )
+                    await asyncio.sleep(1)
                 else:
                     logging.info(
                         f"No se encontraron registros existentes para actualizar en la tabla {table_name}."
                     )
-        return JSONResponse(content={"message": "Success"}, status_code=200)
+                    # Almacena el estado de la tarea
+                    await update_task_status(
+                        task_id,
+                        "in_progress",
+                        f"No se encontraron registros existentes para actualizar en la tabla {table_name}.",
+                    )
+                    await asyncio.sleep(1)
+
+        result = {
+            "status": "success",
+            "status-code": 200,
+            "message": "ETL DM de fichajes ejecutado con éxito.",
+        }
+        # Almacena el estado de la tarea
+        await update_task_status(
+            task_id, "completed", "ETL process completed successfully"
+        )
+        await asyncio.sleep(1)
+
+        return result
+
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)

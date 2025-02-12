@@ -67,6 +67,9 @@ async def run_etl_dm_worked_hours(
     # Ejecutar función ELT
     logging.info("Inicio de ETL para data mart de fichajes.")
 
+    # Genera un identificador único para la tarea
+    task_id = str(uuid.uuid4())
+
     # Validación del formato de las fechas
     from_date_parsed = validate_date_format(from_date)
     to_date_parsed = validate_date_format(to_date)
@@ -77,9 +80,41 @@ async def run_etl_dm_worked_hours(
             status_code=400, detail="from_date debe ser anterior a to_date"
         )
 
-    response = etl_dm_worked_hours.etl_dm_worked_hours(from_date, to_date)
+    # Almacena el estado inicial de la tarea
+    await etl_dm_worked_hours.update_task_status(
+        task_id, "in_progress", "ETL process is running"
+    )
 
-    return response
+    # Lanza la función ETL en segundo plano
+    asyncio.create_task(
+        etl_dm_worked_hours.etl_dm_worked_hours(task_id, from_date, to_date)
+    )
+
+    # Devuelve el identificador y el estado inicial
+    return TaskResponse(
+        task_id=task_id,
+        status="in_progress",
+        message="The ETL process has been initiated. Use the task_id to check the status.",
+    )
+
+
+# Endpoint para verificar el estado del ETL
+@etl_router.get(
+    "/run-etl-dm-worked-hours/status/{task_id}",
+    tags=["Datamarts Process"],
+    response_model=TaskResponse,
+    dependencies=[Depends(verify_secret_key)],
+)
+async def get_etl_dm_worked_hours_status(task_id: str):
+    """Verificar estado de tarea etl_worked_hours"""
+    # Obtiene el estado actual de la tarea
+    task_info = await etl_dm_worked_hours.get_task_status(task_id)
+
+    return TaskResponse(
+        task_id=task_id,
+        status=task_info["status"],
+        message=task_info["message"],
+    )
 
 
 @etl_router.get(
@@ -109,6 +144,9 @@ async def run_etl_dm_imputations(
     # Ejecutar función ELT
     logging.info("Inicio de ETL para data mart de imputaciones.")
 
+    # Genera un identificador único para la tarea
+    task_id = str(uuid.uuid4())
+
     # Validación del formato de las fechas
     from_date_parsed = validate_date_format(from_date)
     to_date_parsed = validate_date_format(to_date)
@@ -119,9 +157,41 @@ async def run_etl_dm_imputations(
             status_code=400, detail="from_date debe ser anterior a to_date"
         )
 
-    response = etl_dm_imputations.etl_dm_imputations(from_date, to_date)
+    # Almacena el estado inicial de la tarea
+    await etl_dm_imputations.update_task_status(
+        task_id, "in_progress", "ETL process is running"
+    )
 
-    return response
+    # Lanza la función ETL en segundo plano
+    asyncio.create_task(
+        etl_dm_imputations.etl_dm_imputations(task_id, from_date, to_date)
+    )
+
+    # Devuelve el identificador y el estado inicial
+    return TaskResponse(
+        task_id=task_id,
+        status="in_progress",
+        message="The ETL process has been initiated. Use the task_id to check the status.",
+    )
+
+
+# Endpoint para verificar el estado del ETL
+@etl_router.get(
+    "/run-etl-dm-imputations/status/{task_id}",
+    tags=["Datamarts Process"],
+    response_model=TaskResponse,
+    dependencies=[Depends(verify_secret_key)],
+)
+async def get_etl_dm_imputations_status(task_id: str):
+    """Verificar estado de tarea etl_dm_imputations"""
+    # Obtiene el estado actual de la tarea
+    task_info = await etl_dm_imputations.get_task_status(task_id)
+
+    return TaskResponse(
+        task_id=task_id,
+        status=task_info["status"],
+        message=task_info["message"],
+    )
 
 
 @etl_router.get(
