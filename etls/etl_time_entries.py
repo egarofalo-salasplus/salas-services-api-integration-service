@@ -49,7 +49,7 @@ async def etl_time_entries(task_id: str, from_date: str, to_date: str):
 
     # Almacena el estado de la tarea
     await update_task_status(task_id, "in_progress", "datos obtenidos")
-    await asyncio.sleep(1)
+    await asyncio.sleep(0.1)
 
     # Conexión con base de datos SQL Server (Data Warehouse Salas)
     server = config("DB_SERVER", default=os.getenv("DB_SERVER"))

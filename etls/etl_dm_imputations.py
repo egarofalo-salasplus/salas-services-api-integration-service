@@ -104,7 +104,7 @@ async def etl_dm_imputations(task_id: str, from_date: str, to_date: str):
         await update_task_status(
             task_id, "in_progress", "Comienza la transformación de datos"
         )
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
 
         # Tomar datos de tabla de imputaciones
         df["time_entry_sesame_id"] = df_time_entries_db["time_entry_sesame_id"]
@@ -233,7 +233,7 @@ async def etl_dm_imputations(task_id: str, from_date: str, to_date: str):
         await update_task_status(
             task_id, "in_progress", "Columnas reordenadas y renombradas"
         )
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
 
         # Carga
         # Conexión con Base de Datos de Datamart Hub SQL Server
@@ -257,7 +257,7 @@ async def etl_dm_imputations(task_id: str, from_date: str, to_date: str):
         logging.info("Inicia carga a base de datos.")
         # Almacena el estado de la tarea
         await update_task_status(task_id, "in_progress", "Inicia la carga de datos")
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
 
         with engine.connect() as connection:
             # Crear la tabla si no existe
@@ -275,7 +275,7 @@ async def etl_dm_imputations(task_id: str, from_date: str, to_date: str):
                 await update_task_status(
                     task_id, "in_progress", "Datos introducidos con éxito."
                 )
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.1)
             else:
                 logging.info(f"La tabla {table_name} ya existe.")
                 # Leer la tabla existente
@@ -305,7 +305,7 @@ async def etl_dm_imputations(task_id: str, from_date: str, to_date: str):
                     await update_task_status(
                         task_id, "in_progress", "Datos nuevos introducidos con éxito."
                     )
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.1)
                 else:
                     logging.info(
                         f"La tabla {table_name} ya está actualizada. No se agregaron registros nuevos."
@@ -316,7 +316,7 @@ async def etl_dm_imputations(task_id: str, from_date: str, to_date: str):
                         "in_progress",
                         f"La tabla {table_name} ya está actualizada. No se agregaron registros nuevos.",
                     )
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.1)
 
                 # Identificar registros existentes para actualizar
                 df_table_existing_to_update = table_df[
@@ -365,7 +365,7 @@ async def etl_dm_imputations(task_id: str, from_date: str, to_date: str):
                                 "in_progress",
                                 f"Revisando actualizaciones en {index_field}: {row[index_field]}",
                             )
-                            await asyncio.sleep(1)
+                            await asyncio.sleep(0.1)
                             connection.execute(text(update_query), params)
                         else:
                             logging.info(
@@ -377,7 +377,7 @@ async def etl_dm_imputations(task_id: str, from_date: str, to_date: str):
                                 "in_progress",
                                 f"No hay cambios para {index_field}: {row[index_field]}",
                             )
-                            await asyncio.sleep(1)
+                            await asyncio.sleep(0.1)
 
                     logging.info("Registros existentes actualizados con éxito.")
                     # Almacena el estado de la tarea
@@ -386,7 +386,7 @@ async def etl_dm_imputations(task_id: str, from_date: str, to_date: str):
                         "in_progress",
                         "Registros existentes actualizados con éxito.",
                     )
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.1)
                 else:
                     logging.info(
                         f"No se encontraron registros existentes para actualizar en la tabla {table_name}."
@@ -397,7 +397,7 @@ async def etl_dm_imputations(task_id: str, from_date: str, to_date: str):
                         "in_progress",
                         f"No se encontraron registros existentes para actualizar en la tabla {table_name}.",
                     )
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.1)
 
         result = {
             "status": "success",
@@ -408,7 +408,7 @@ async def etl_dm_imputations(task_id: str, from_date: str, to_date: str):
         await update_task_status(
             task_id, "completed", "ETL process completed successfully"
         )
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
 
         return result
 
