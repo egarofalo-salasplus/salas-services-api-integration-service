@@ -260,7 +260,8 @@ async def etl_worked_hours(task_id: str, from_date: str, to_date: str):
     # Actualiza el estado de la tarea al finalizar
     await update_task_status(
         task_id,
-        "completed",
+        
+        ,
         "ETL process completed successfully",
     )
     await asyncio.sleep(0.1)
